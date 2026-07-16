@@ -2,7 +2,9 @@
 
 **Owner:** Rodrigo Brossi (rbrossi)
 **Product:** Web app to configure a Volkswagen Fusca (Beetle, Brazilian market) in an interactive 3D viewer
-**Status:** Scaffold + working prototype (placeholder geometry, core config pipeline wired end-to-end)
+**Status:** Working prototype (placeholder geometry, core config pipeline + 360° turntable wired end-to-end)
+
+**Full design doc:** [docs/SDD.md](docs/SDD.md) — architecture, data model, reference vehicle, known gaps.
 
 ---
 
@@ -10,8 +12,13 @@
 
 A 3D configurator where a user picks a Fusca chassis year, wheels, steering wheel,
 suspension height, exterior color, interior, engine, and can apply real-world-inspired
-style presets (Cal Look, Baja Bug, Rat Look/Patina, Resto Stock, Rebaixado BR street).
-Changes update a live 3D model instantly.
+style presets (Cal Look, Baja Bug, Rat Look/Patina, Resto Stock, Rebaixado BR street, and
+"Meu Fusca" — an approximation of the owner's real reference car). Changes update a live 3D
+model instantly, and the viewer auto-rotates as a 360° turntable (toggle button in the viewer).
+
+`reference/fusca-photos/` holds real photos/video of the owner's Fusca used to ground some
+data entries (color, wheels, taillight shape). It's git-ignored (contains the visible license
+plate) — local reference only, never committed.
 
 ## Stack
 
@@ -40,15 +47,9 @@ Changes update a live 3D model instantly.
 
 ## Known gaps / next steps
 
-- Replace primitive-geometry placeholder body with a proper Fusca mesh (GLTF),
-  ideally with swappable parts per chassis year (oval/round-tail/square-tail/Itamar
-  body panels, headlight/taillight variants).
-- Model an interior/cutaway or engine-bay view so interior trim, steering wheel,
-  and engine choices are visually reflected, not just listed in the spec sheet.
-- Verify/replace the curated color and trim reference data in `src/data/fusca.ts`
-  against actual VW do Brasil production records if factual accuracy per year matters.
-- Consider adding a "share build" export/snapshot and mobile-responsive layout
-  (current layout is a fixed two-pane desktop layout).
+See [docs/SDD.md](docs/SDD.md) §6 for the full list (body mesh still primitive-geometry,
+interior/steering-wheel/engine not visually modeled, mobile layout, share/export). Update
+that section, not this file, when gaps are resolved or new ones are found.
 
 ## Running locally
 

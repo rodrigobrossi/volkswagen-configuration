@@ -5,12 +5,31 @@
 }
 
 .viewer {
+  position: relative;
   flex: 1;
   min-width: 0;
 }
 
 .viewer canvas {
   display: block;
+}
+
+.rotate-toggle {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  border: 1px solid var(--panel-border);
+  background: rgba(31, 32, 40, 0.85);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+
+.rotate-toggle:hover {
+  border-color: var(--accent);
 }
 
 .config-panel {

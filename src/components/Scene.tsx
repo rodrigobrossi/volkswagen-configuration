@@ -1,8 +1,11 @@
 import { Canvas } from '@react-three/fiber'
 import { ContactShadows, OrbitControls } from '@react-three/drei'
 import { FuscaModel } from './FuscaModel'
+import { useConfigStore } from '../store/configStore'
 
 export function Scene() {
+  const autoRotate = useConfigStore((s) => s.autoRotate)
+
   return (
     <Canvas shadows camera={{ position: [4.5, 2.2, 5], fov: 40 }}>
       <color attach="background" args={['#1b1d22']} />
@@ -24,6 +27,10 @@ export function Scene() {
         maxDistance={10}
         minPolarAngle={0.3}
         maxPolarAngle={Math.PI / 2.1}
+        autoRotate={autoRotate}
+        autoRotateSpeed={2}
+        enableDamping
+        dampingFactor={0.1}
       />
     </Canvas>
   )

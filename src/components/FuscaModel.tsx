@@ -46,7 +46,7 @@ export function FuscaModel() {
           ? { roughness: 0.35, metalness: 0.6 }
           : { roughness: 0.25, metalness: 0.15 }
 
-  const isRoundTaillight = chassisYear.bodyStyle === 'round-tail' || chassisYear.bodyStyle === 'oval'
+  const taillightShape = chassisYear.taillightShape
 
   return (
     <group>
@@ -111,7 +111,7 @@ export function FuscaModel() {
         </mesh>
 
         {/* Taillights - shape reflects chassis era */}
-        {isRoundTaillight ? (
+        {taillightShape === 'round' && (
           <>
             <mesh position={[0.68, 0.55, -1.6]}>
               <sphereGeometry args={[0.12, 16, 16]} />
@@ -122,7 +122,8 @@ export function FuscaModel() {
               <meshStandardMaterial color="#8a1f1f" emissive="#4a0000" emissiveIntensity={0.4} />
             </mesh>
           </>
-        ) : (
+        )}
+        {taillightShape === 'square' && (
           <>
             <mesh position={[0.68, 0.55, -1.62]}>
               <boxGeometry args={[0.14, 0.28, 0.06]} />
@@ -130,6 +131,18 @@ export function FuscaModel() {
             </mesh>
             <mesh position={[-0.68, 0.55, -1.62]}>
               <boxGeometry args={[0.14, 0.28, 0.06]} />
+              <meshStandardMaterial color="#8a1f1f" emissive="#4a0000" emissiveIntensity={0.4} />
+            </mesh>
+          </>
+        )}
+        {taillightShape === 'vertical-oval' && (
+          <>
+            <mesh position={[0.68, 0.53, -1.6]} scale={[0.62, 1, 0.5]}>
+              <sphereGeometry args={[0.18, 16, 16]} />
+              <meshStandardMaterial color="#8a1f1f" emissive="#4a0000" emissiveIntensity={0.4} />
+            </mesh>
+            <mesh position={[-0.68, 0.53, -1.6]} scale={[0.62, 1, 0.5]}>
+              <sphereGeometry args={[0.18, 16, 16]} />
               <meshStandardMaterial color="#8a1f1f" emissive="#4a0000" emissiveIntensity={0.4} />
             </mesh>
           </>

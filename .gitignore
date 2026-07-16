@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Personal reference photos/video of the real car (contains license plate) — local use only
+reference/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

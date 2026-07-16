@@ -8,12 +8,14 @@
  */
 
 export type BodyStyle = 'oval' | 'round-tail' | 'square-tail' | 'itamar'
+export type TaillightShape = 'round' | 'square' | 'vertical-oval'
 
 export interface ChassisYear {
   id: string
   label: string
   yearRange: string
   bodyStyle: BodyStyle
+  taillightShape: TaillightShape
   note: string
 }
 
@@ -81,6 +83,7 @@ export const chassisYears: ChassisYear[] = [
     label: '1959–1965',
     yearRange: '1959-1965',
     bodyStyle: 'oval',
+    taillightShape: 'round',
     note: 'Early Brazilian production, oval rear window, split/narrow bumpers.',
   },
   {
@@ -88,6 +91,7 @@ export const chassisYears: ChassisYear[] = [
     label: '1966–1970',
     yearRange: '1966-1970',
     bodyStyle: 'round-tail',
+    taillightShape: 'round',
     note: 'Larger rear window, round "olho-de-boi" taillights introduced.',
   },
   {
@@ -95,13 +99,15 @@ export const chassisYears: ChassisYear[] = [
     label: '1971–1985',
     yearRange: '1971-1985',
     bodyStyle: 'square-tail',
-    note: 'Curved windshield (from 1973), squared taillights, MacPherson front end (from 1976).',
+    taillightShape: 'vertical-oval',
+    note: 'Curved windshield (from 1973), vertical oval taillights, MacPherson front end (from 1976). Matches the reference car in reference/fusca-photos.',
   },
   {
     id: 'itamar-86-96',
     label: '1986–1996',
     yearRange: '1986-1996',
     bodyStyle: 'itamar',
+    taillightShape: 'square',
     note: 'Final Brazilian production run, incl. the 1993-1996 "Fusca Itamar" relaunch.',
   },
 ]
@@ -141,6 +147,13 @@ export const wheelOptions: WheelOption[] = [
     rimColor: '#3b3b3b',
     tireProfile: 'offroad',
     note: 'Wide knobby tire on a steel rim, for Baja Bug builds.',
+  },
+  {
+    id: 'aco-hubcap',
+    label: 'Aço + Calota (Meu Fusca)',
+    rimColor: '#c7c9c7',
+    tireProfile: 'street',
+    note: 'Painted steel wheel with a small chrome hubcap, matching the reference photos closely.',
   },
 ]
 
@@ -196,6 +209,13 @@ export const exteriorColors: ExteriorColor[] = [
   { id: 'amarelo-pele', label: 'Amarelo Pele', hex: '#e0b84a', finish: 'gloss' },
   { id: 'matte-cinza', label: 'Cinza Fosco (Matte Grey)', hex: '#8a8a86', finish: 'matte' },
   { id: 'patina-bare', label: 'Patina / Rat Look', hex: '#7a6a52', finish: 'patina' },
+  {
+    // Sampled from reference/fusca-photos, not an official VW factory color code.
+    id: 'meu-fusca-cobre',
+    label: 'Cobre Metálico (Meu Fusca)',
+    hex: '#b2502d',
+    finish: 'metallic',
+  },
 ]
 
 export const interiorOptions: InteriorOption[] = [
@@ -287,6 +307,20 @@ export const stylePresets: StylePreset[] = [
       exteriorColorId: 'azul-aster',
       interiorId: 'red-bucket',
       engineId: '1500-stock',
+    },
+  },
+  {
+    id: 'meu-fusca',
+    label: 'Meu Fusca (Reference)',
+    description: 'Approximation of the reference car in reference/fusca-photos: copper metallic, steel wheels with small hubcaps, sport steering wheel, stock ride height.',
+    config: {
+      chassisYearId: 'square-71-85',
+      wheelId: 'aco-hubcap',
+      steeringWheelId: 'sport-banana',
+      suspensionId: 'stock-height',
+      exteriorColorId: 'meu-fusca-cobre',
+      interiorId: 'black-vinyl',
+      engineId: '1300-stock',
     },
   },
 ]
