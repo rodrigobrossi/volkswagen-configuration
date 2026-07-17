@@ -52,6 +52,17 @@
   margin: 0 0 20px;
 }
 
+.real-model-hint {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-dim);
+  background: rgba(192, 132, 252, 0.08);
+  border: 1px solid rgba(192, 132, 252, 0.4);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 20px;
+}
+
 .panel-section {
   margin-bottom: 20px;
 }

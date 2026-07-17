@@ -1,11 +1,58 @@
-# 3D Model Spec — `FuscaModel.tsx` / `Wheel.tsx`
+# 3D Model Spec — `FuscaModel.tsx` / `Wheel.tsx` / Real GLTF Models
 
-**Status: final spec, fully implemented.** Primitive-geometry placeholder (no GLTF yet — see
-[docs/SDD.md](../docs/SDD.md) §6), but this document covers the full required feature set:
-exterior proportions, interior, openable parts (doors, front trunk, engine lid), and accuracy
-criteria against the reference vehicle. Every section is marked **[implemented]**; if code ever
-drifts from this doc, that's a bug in one of the two — fix whichever is wrong, don't let them
-diverge silently.
+**Status: final spec, fully implemented.** The viewer now shows **real GLTF models** (see §
+"Real GLTF Models" below) for the presets/eras that have one, and falls back to the fully
+config-reactive **primitive-geometry placeholder** described in the rest of this document for
+everything else. Every section is marked **[implemented]**; if code ever drifts from this doc,
+that's a bug in one of the two — fix whichever is wrong, don't let them diverge silently.
+
+## Real GLTF Models — [implemented]
+
+4 real, licensed 3D models (see [CREDITS.md](../CREDITS.md)) render in place of the primitive
+body for specific style presets/eras — an actual detailed mesh beats any amount of primitive
+tuning. Selection logic lives in `src/data/carModels.ts` (`pickRealModel`), rendering in
+`src/components/RealCarModel.tsx`, and the decision between real/primitive in
+`src/components/CarModel.tsx` (used by `Scene.tsx` in place of `FuscaModel` directly).
+
+| Trigger | Model | File |
+|---|---|---|
+| `cal-look` preset | VW Beetle Florida (Cal Look) | `fusca-callook.glb` |
+| `rat-look` preset | Old VW Bug (Rat Look) | `fusca-ratlook.glb` |
+| `resto-stock` preset | 1968 Volkswagen Beetle | `fusca-1968.glb` |
+| `oval-59-65` chassis year, no preset active | VW Typ 11 (1948) | `fusca-1948.glb` |
+| `round-66-70` chassis year, no preset active | 1968 Volkswagen Beetle | `fusca-1968.glb` |
+| Everything else (`baja-bug`, `rebaixado-br`, `meu-fusca` presets; `square-71-85`/`itamar-86-96` with no preset) | — | primitive `FuscaModel` |
+
+Priority: an **active style preset wins over chassis year** — e.g. `baja-bug` (whose
+`chassisYearId` is `round-66-70`) does *not* fall back to the stock 1968 model, which would
+misrepresent a raised/off-road build as a clean stock car. Chassis-year-only matching applies
+only when no preset is active (freeform tweaking). This is deliberate, not a gap: there's no
+real model for `square-71-85` (the user's own reference-car era) or `itamar-86-96` among what
+was sourced — the primitive placeholder remains the only option there, and that's fine.
+
+**Two-cars-in-one-file gotcha**: `fusca-1968.glb` bundles two separate car objects in its scene
+(an artifact of the source Sketchfab upload) — one clean, one with a broken/floating geometry
+chunk (confirmed visually). `RealCarModel` renders only the node named
+`1968_Volkswagen_Beetle_(new)_38` (**note the underscores** — three.js's `GLTFLoader` sanitizes
+node names, spaces become underscores, at load time; matching against the raw glTF JSON's name
+silently fails and falls back to rendering the whole scene, i.e. both cars overlapping — this
+bit once already, see `.claude/memory/context.md`).
+
+**Per-model calibration** (`carModels.ts`, `CarModelDef.calibration`): each of the 4 files was
+authored by a different artist at a different native unit scale (`fusca-callook.glb` ~100x
+meters, `fusca-1948.glb` ~1/5.6 of meters, the other two already ~meters) and not necessarily
+facing the same direction. X/Z centering and ground contact (Y) are **computed automatically**
+from each object's bounding box in `RealCarModel.tsx` — only `rotationY` and `scale` are
+manually tuned per model, and both were derived from logged bounding-box numbers divided into
+the target `LENGTH` (below), not guessed, then confirmed by screenshot.
+
+**When a real model is active**: wheel style, exterior color, interior, steering wheel, and
+openable-parts (doors/trunk/engine-lid) selections still update `configStore` normally, but
+**do not visually apply** to a real model — none of the 4 files are segmented with
+identifiable per-part nodes (materials range from clearly-named in `fusca-1968.glb` to fully
+generic `material0000..0007` in `fusca-ratlook.glb`), so per-model material overrides or a
+door-opening rig were out of scope for this pass. `ConfigPanel.tsx` shows an inline hint
+(`.real-model-hint`) when this is the case, rather than hiding/disabling the controls.
 
 ## Real-world dimensions (source of truth — 1 Three.js unit = 1 meter) — [implemented]
 

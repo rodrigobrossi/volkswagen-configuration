@@ -11,6 +11,59 @@ update those when structure changes, and add an entry here for *why*.
 
 ---
 
+## 2026-07-17 (night) — Real GLTF models integrated: 4 licensed Beetles, preset/era-keyed swap
+
+- User asked me to find a free Beetle GLTF and integrate it. Sketchfab has models but gates
+  *all* downloads behind account login, even CC0/free ones — I can't create an account on the
+  user's behalf, so I couldn't fetch one automatically. User downloaded models manually instead
+  and ended up sourcing **4 distinct, real, licensed models** covering different eras/styles,
+  not one model to parametrically reconfigure:
+  - `1948/` → VW Typ 11 1948 (Peter Boehm, CC-BY-4.0)
+  - `1968/` → 1968 Volkswagen Beetle LP (KrStolorz, Sketchfab Standard)
+  - `Style/CalLook/` → VW Beetle Florida v2 (Libau Media, CC-BY-4.0)
+  - `Style/ratlook/` → Old VW Bug (jtressle, CC-BY-4.0)
+  All confirmed commercially usable by reading each bundled `license.txt` directly, not assumed.
+  3 need attribution (now in `CREDITS.md`); Sketchfab Standard doesn't strictly require it but
+  got credited anyway.
+- **The 1968 file bundles two car objects in one scene** (`"1968 Volkswagen Beetle (new)_38"`,
+  clean; `"Volkswagen Beetle (old)_64"`, has a broken/floating geometry chunk) — confirmed by
+  parsing the raw glTF JSON with a Node script, then visually by rendering both side-by-side in
+  a temporary debug harness (`GltfInspector.tsx` + `?inspect=1` route, since removed). Resolved
+  by rendering only the "new" node at runtime (`findByName` in `RealCarModel.tsx`), not by
+  physically editing the binary file.
+- **Real bug, real lesson**: raw glTF JSON showed the node name with *spaces*
+  (`"1968 Volkswagen Beetle (new)_38"`); three.js's `GLTFLoader` sanitizes node names at load
+  time (spaces → underscores), so the actual runtime name is
+  `"1968_Volkswagen_Beetle_(new)_38"`. Using the raw-JSON name in `carModels.ts` silently
+  matched nothing and fell back to rendering the *whole* scene (both bundled cars overlapping) —
+  caught by screenshot, not by any thrown error. **Always verify node names against what
+  `useGLTF` actually loads in the browser, never against the raw file's JSON.**
+- **Every model needed different scale/position calibration** — each was authored by a
+  different artist at a different native unit scale: `fusca-callook.glb` ~100x too large
+  (~226×152×388 units, needed `scale: 0.0105`), `fusca-1948.glb` ~5.6x too small (~0.27×0.26×0.72
+  units, needed `scale: 5.62`), `fusca-1968.glb` and `fusca-ratlook.glb` already ~meters
+  (`scale: 1`). Determined by temporarily logging each object's `THREE.Box3` bounding size
+  (`console.log` in a `useEffect`, removed once calibrated) and dividing the real target length
+  (4.07m, from `.specs/3d-model.spec.md`) by the logged length — not guessed. X/Z centering and
+  Y ground-contact are computed automatically from the bounding box every render in
+  `RealCarModel.tsx` (not hardcoded), so only `rotationY` and `scale` need manual tuning per
+  model. CalLook also needed a 180° `rotationY` flip — rendered rear-first by default.
+- **Design call**: swap the whole visible car per style-preset/chassis-year rather than trying
+  to make one external mesh reactive to every config option. None of the 4 files have
+  identifiable per-part nodes (materials range from clear names in `fusca-1968.glb` to fully
+  generic `material0000..0007` in `fusca-ratlook.glb`) — real per-model wheel/color/door
+  wiring would need hours of manual trial-and-error per file. Mapping logic
+  (`pickRealModel` in `carModels.ts`) explicitly gives **style preset priority over chassis
+  year** — `baja-bug` (whose era is `round-66-70`) must NOT silently show the clean stock 1968
+  model, which would misrepresent a raised/off-road build. `ConfigPanel` shows an inline hint
+  when a real model is active instead of hiding the now-inert wheel/color/door controls (kept
+  the panel code simpler; the controls still update the store correctly for when the user
+  switches back to a procedural preset).
+- Committed `public/models/*.glb` (~45MB total) to git — licenses are unambiguous enough
+  (CC-BY-4.0 ×3, Sketchfab Standard ×1) to justify it, unlike `reference/fusca-photos/` (the
+  user's personal photos, still git-ignored) or `reference/gltf-models/` (an earlier debug-only
+  copy, since deleted along with the rest of the investigation scaffolding).
+
 ## 2026-07-17 (evening) — Mirrors, indicators, two-tone taillights, wheel spoke geometry
 
 - User asked for the model to "consider glass windows and everything that details this model":

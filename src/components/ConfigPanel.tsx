@@ -8,6 +8,7 @@ import {
   suspensionOptions,
   wheelOptions,
 } from '../data/fusca'
+import { pickRealModel } from '../data/carModels'
 import { useConfigStore } from '../store/configStore'
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -52,6 +53,7 @@ export function ConfigPanel() {
 
   const selectedEngine = engineOptions.find((e) => e.id === state.engineId)!
   const selectedChassis = chassisYears.find((c) => c.id === state.chassisYearId)!
+  const activeRealModel = pickRealModel(state.activePresetId, state.chassisYearId)
 
   return (
     <aside className="config-panel">
@@ -59,6 +61,14 @@ export function ConfigPanel() {
         <h1>Fusca Configurator</h1>
         <p className="subtitle">Monte seu Fusca — Brazilian VW Beetle 3D builder</p>
       </header>
+
+      {activeRealModel && (
+        <div className="real-model-hint">
+          Showing a real 3D model ({activeRealModel.label}, {activeRealModel.credit}). Wheels,
+          exterior color, interior, steering wheel, and openable parts below are saved but won't
+          visually apply until you switch to a preset without a matching real model.
+        </div>
+      )}
 
       <Section title="Style Preset">
         <div className="preset-grid">

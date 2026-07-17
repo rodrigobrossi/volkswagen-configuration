@@ -16,7 +16,10 @@ and engine, plus one-click style presets (Cal Look, Baja Bug, Rat Look/Patina, R
 Rebaixado BR street, and a preset approximating the owner's real reference car). Every change
 updates the live 3D model instantly. The viewer also runs as a 360° auto-rotating turntable.
 Doors, the front trunk (porta-malas), and the engine lid (tampa do motor) can be opened; a
-steering wheel and simplified seats are visible in the cabin.
+steering wheel and simplified seats are visible in the cabin. For 3 of the 6 style presets plus
+2 chassis-year-only selections, the viewer shows one of **4 real, licensed 3D models**
+(`public/models/`, see [CREDITS.md](../CREDITS.md)) instead of the primitive body — see
+[.specs/3d-model.spec.md](../.specs/3d-model.spec.md) "Real GLTF Models".
 
 Non-goals for now: photorealistic rendering, a full historically-verified parts catalog,
 mobile-first layout, or a backend (everything is client-side/static data).
@@ -26,14 +29,18 @@ mobile-first layout, or a backend (everything is client-side/static data).
 ```
 src/
   data/fusca.ts        — static reference data (source of truth for all option lists)
+  data/carModels.ts    — real GLTF model metadata + pickRealModel() selection rule
   store/configStore.ts — zustand store: active config + actions (set, applyPreset,
                           toggleAutoRotate, toggleDoors, toggleFrontTrunk, toggleEngineLid)
   components/
     Scene.tsx           — R3F Canvas, lighting, ground, OrbitControls (incl. 360° auto-rotate)
-    FuscaModel.tsx       — the car mesh + interior + openable parts, entirely driven by the config store
-    Wheel.tsx            — wheel/tire mesh, parameterized by rim color + tire profile
+    CarModel.tsx         — picks real GLTF model vs. procedural FuscaModel (Scene renders this)
+    RealCarModel.tsx     — loads/calibrates one of the 4 real .glb files via useGLTF
+    FuscaModel.tsx       — the procedural placeholder car mesh + interior + openable parts
+    Wheel.tsx            — wheel/tire mesh, parameterized by rim color + tire profile (procedural path only)
     ConfigPanel.tsx      — sidebar UI: reads/writes the store, renders option lists from data/fusca.ts
   App.tsx               — layout: viewer pane (Scene + 360° toggle button) + ConfigPanel
+public/models/*.glb    — the 4 real 3D models (committed — see CREDITS.md for licenses)
 ```
 
 Data flow is one-directional: `data/fusca.ts` (option catalogs) → `configStore` (selected ids)
@@ -86,22 +93,33 @@ the transition between auto-spin and user-driven rotation.
 
 ## 6. Known Gaps / Future Work
 
-- **Body mesh**: still primitive-geometry (spheres/boxes/cylinders), not a real Fusca mesh —
-  now calibrated to real-world dimensions with distinct doors/windows/trim (see
-  [.specs/3d-model.spec.md](../.specs/3d-model.spec.md)), but it's a better-fitted placeholder,
-  not a faithful likeness. Next step would be a proper GLTF model, ideally with swappable parts
-  per chassis year (body panels, headlight/taillight variants) instead of primitive swaps.
-  No image textures yet — surface detail comes from geometry (seams, pillars, louvers) and
-  clearcoat material, not UV-mapped textures.
-- **Interior visibility is an approximation, not true occlusion**: the exterior body is solid
-  overlapping ellipsoids with no real cavity, so the dashboard/seats/steering wheel render with
-  `depthTest={false}` (always on top) rather than being properly hidden behind closed doors/
-  body panels. See `.specs/3d-model.spec.md` Interior section and the 2026-07-17 memory entry
-  for why. A real fix needs either CSG (hollow the shells) or the GLTF rework above.
-- **Engine** is still data-only — reflected in the spec-sheet text, not rendered in 3D (no
-  visible engine block even with the engine lid open, by design — see 3d-model.spec.md).
-- **Doors/trunk/engine lid** open instantly (no animation easing) and doors move together (no
-  independent left/right control) — both explicitly out of scope for now, see 3d-model.spec.md.
+- **Real models cover 5 of ~10 meaningful selections**: `cal-look`, `rat-look`, `resto-stock`
+  presets, plus freeform `oval-59-65`/`round-66-70` chassis years. Everything else (`baja-bug`,
+  `rebaixado-br`, `meu-fusca` presets; `square-71-85`/`itamar-86-96` freeform — including the
+  user's own reference-car era) still falls back to the primitive placeholder, since no sourced
+  real model matches those. Sourcing/commissioning models for those would close the gap.
+- **Real models don't respond to config options**: none of the 4 `.glb` files are segmented
+  with identifiable per-part nodes, so wheel style, exterior color, interior, steering wheel,
+  and door/trunk/engine-lid opening only visually apply on the primitive placeholder — see
+  `.specs/3d-model.spec.md` "Real GLTF Models". `ConfigPanel` shows an inline hint when a real
+  model is active rather than pretending those controls do something. Per-model material-name
+  mapping (feasible for `fusca-1968.glb`, which has clear names like `Body`/`Paint_new`; much
+  harder for `fusca-ratlook.glb`'s generic `material0000..0007`) is future work, not attempted.
+- **Primitive body mesh**: still primitive-geometry (spheres/boxes/cylinders) for the fallback
+  case — calibrated to real-world dimensions with distinct doors/windows/trim (see
+  [.specs/3d-model.spec.md](../.specs/3d-model.spec.md)), but a better-fitted placeholder, not a
+  faithful likeness. No image textures — surface detail comes from geometry and clearcoat
+  material, not UV-mapped textures (the real GLTF models do have proper textures).
+- **Interior visibility is an approximation, not true occlusion** (primitive path only): the
+  exterior body is solid overlapping ellipsoids with no real cavity, so the dashboard/seats/
+  steering wheel render with `depthTest={false}` (always on top) rather than being properly
+  hidden behind closed doors/body panels. See `.specs/3d-model.spec.md` Interior section and the
+  2026-07-17 memory entries for why. A real fix needs either CSG (hollow the shells) or more
+  real (segmented) GLTF models.
+- **Engine** is still data-only on the primitive path — reflected in the spec-sheet text, not
+  rendered in 3D (no visible engine block even with the engine lid open, by design).
+- **Doors/trunk/engine lid** (primitive path) open instantly (no animation easing) and doors
+  move together (no independent left/right control) — both explicitly out of scope for now.
 - **Factual accuracy**: colors/trim/engine data (§3) should be verified against actual VW do
   Brasil production records if exactness per year matters for the product.
 - **Mobile layout**: current two-pane layout is fixed-width desktop only.

@@ -1,6 +1,6 @@
 import { Canvas } from '@react-three/fiber'
 import { ContactShadows, OrbitControls } from '@react-three/drei'
-import { FuscaModel } from './FuscaModel'
+import { CarModel } from './CarModel'
 import { useConfigStore } from '../store/configStore'
 
 export function Scene() {
@@ -18,7 +18,7 @@ export function Scene() {
         shadow-mapSize={[1024, 1024]}
       />
       <directionalLight position={[-4, 3, -4]} intensity={0.4} />
-      <FuscaModel />
+      <CarModel />
       <ContactShadows position={[0, 0, 0]} opacity={0.6} scale={10} blur={2} far={2} />
       <gridHelper args={[20, 20, '#333333', '#2a2a2a']} position={[0, 0.001, 0]} />
       <OrbitControls
