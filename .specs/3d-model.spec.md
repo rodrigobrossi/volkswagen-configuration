@@ -1,10 +1,13 @@
 # 3D Model Spec — `FuscaModel.tsx` / `Wheel.tsx`
 
-Status: primitive-geometry placeholder (no GLTF yet — see [docs/SDD.md](../docs/SDD.md) §6).
-This spec defines what the placeholder must get right regardless: real-world proportions and
-a recognizable set of body features, not just a rounded blob.
+**Status: final spec, fully implemented.** Primitive-geometry placeholder (no GLTF yet — see
+[docs/SDD.md](../docs/SDD.md) §6), but this document covers the full required feature set:
+exterior proportions, interior, openable parts (doors, front trunk, engine lid), and accuracy
+criteria against the reference vehicle. Every section is marked **[implemented]**; if code ever
+drifts from this doc, that's a bug in one of the two — fix whichever is wrong, don't let them
+diverge silently.
 
-## Real-world dimensions (source of truth — 1 Three.js unit = 1 meter)
+## Real-world dimensions (source of truth — 1 Three.js unit = 1 meter) — [implemented]
 
 | Constant | Value | Notes |
 |---|---|---|
@@ -15,54 +18,118 @@ a recognizable set of body features, not just a rounded blob.
 | `TRACK` | 1.30 m | left-to-right wheel-center distance (narrower than `WIDTH` — fenders bulge past the wheel centerline) |
 | `WHEEL_RADIUS` | 0.32 m | tire outer radius (15" steel wheel + tire) |
 
-These must be defined as named constants in `FuscaModel.tsx`/`Wheel.tsx` and every mesh
-position/scale derived from them (as a literal value or a fraction of one) — no unrelated
-magic numbers. If a future GLTF import replaces the placeholder body, these constants still
-apply to wheel placement and camera framing.
+These are named constants in `FuscaModel.tsx`/`Wheel.tsx`; every mesh position/scale is derived
+from them (a literal value or a fraction of one) — no unrelated magic numbers. If a future GLTF
+import replaces the placeholder body, these constants still apply to wheel placement, door/trunk
+hinge points, and camera framing.
 
-## Required visual elements
+## Exterior body — [implemented]
 
-A conforming render must include, all reactive to the config store where noted:
+The body is **4 overlapping ellipsoids, not 1** — a single symmetric shell reads as a blob/egg,
+not a car (see `.claude/memory/context.md`, 2026-07-17 entry, for why):
 
-- **Wheels** (4) at `±TRACK/2` × `±WHEELBASE/2`, wheel style/tire profile reactive — see `Wheel.tsx`.
-- **Body shell** is **4 overlapping ellipsoids, not 1** — a single symmetric shell reads as a
-  blob/egg, not a car (learned the hard way, see `.claude/memory/context.md`):
-  - `LOWER_BODY` — wide, low, spans nearly the full length.
-  - `HOOD` — low, tapering, front.
-  - `REAR_DECK` — low, tapering, rear, slightly taller than `HOOD`.
-  - `CABIN` — **distinctly narrower and taller** than `LOWER_BODY`, rear-biased. The
-    width/height gap between `CABIN` and `LOWER_BODY` is what creates a visible shoulder/
-    beltline — this is the one detail that most determines whether it reads as a car. Do not
-    collapse these back into one shell.
-  - **Fender arches**: a half-torus (`arc ≈ 1.1π`, standing in the Y-Z plane via
-    `rotation.y = π/2`) over each wheel, body-colored, so the wheels visually tie into the body
-    instead of floating underneath with a gap.
-  All fit inside the `LENGTH`×`WIDTH`×`HEIGHT` envelope. Color/finish reactive to `exteriorColorId`.
-- **Windshield** — a distinct raked glass pane at the front of the greenhouse, not merged with the side/rear glass into one shape.
-- **Rear window** — a distinct raked glass pane at the back, smaller than the windshield.
-- **Two side door windows** (left + right only — the Fusca is a 2-door car, no rear doors) — distinct rectangular panes at door height.
-- **Two doors** (left + right), each with:
-  - A visible seam/outline (front edge, rear edge, sill) distinguishing the door panel from the rest of the body.
-  - A door handle (small chrome/metallic mesh).
-- **Running boards** — a chrome strip along each sill, below the doors.
-- **Front and rear bumpers** — chrome, reactive to nothing (fixed trim).
-- **Headlights** (2, round) and **taillights** (2, shape reactive to `chassisYear.taillightShape`: `round | square | vertical-oval`).
-- **Hood seam** — a subtle centerline groove on the front hood (visible on real Fuscas).
-- **Rear engine-lid vent louvers** — a small set of parallel strips on the rear cover, matching `reference/fusca-photos/`.
-- **Suspension height** shifts the whole body+trim group vertically (wheels stay planted) — unchanged from current behavior.
+- `LOWER_BODY` — wide, low, spans nearly the full length.
+- `HOOD` — low, tapering, front. Doubles as the **front trunk lid** (see Openable Parts).
+- `REAR_DECK` — low, tapering, rear, slightly taller than `HOOD`. Doubles as the **engine lid**
+  (see Openable Parts).
+- `CABIN` — **distinctly narrower and taller** than `LOWER_BODY`, rear-biased. The width/height
+  gap between `CABIN` and `LOWER_BODY` is what creates a visible shoulder/beltline — the one
+  detail that most determines whether it reads as a car. Do not collapse these back into one shell.
+- **Fender arches**: a half-torus (`arc ≈ 1.1π`, standing in the Y-Z plane via
+  `rotation.y = π/2`) over each wheel, body-colored, so wheels visually tie into the body instead
+  of floating underneath with a gap.
 
-## Materials
+All fit inside the `LENGTH`×`WIDTH`×`HEIGHT` envelope. Color/finish reactive to `exteriorColorId`.
+
+**Glass**: windshield/side/rear glass is one nested ellipsoid (`CABIN`-fitted) split visually by
+pillars — see `Pillar` in `FuscaModel.tsx`. Two side door windows (left + right only — the Fusca
+is a 2-door car).
+
+**Fixed trim**: running boards, front/rear bumpers (chrome), headlights (2, round), taillights
+(2, shape reactive to `chassisYear.taillightShape`: `round | square | vertical-oval`), hood
+centerline seam, rear engine-lid vent louvers (must move with the engine lid when it opens — see
+below).
+
+## Openable parts — [implemented]
+
+Real behavior being modeled, in Portuguese where that's the natural term:
+
+| Part | PT term | Hinge | Opens |
+|---|---|---|---|
+| Front trunk lid | porta-malas | top/rear edge of `HOOD` (near the cowl) | up and forward (rotate around local X) |
+| Engine lid | tampa do motor | top/front edge of `REAR_DECK` (near the cabin) | up and backward (rotate around local X) |
+| Both doors | portas | front edge of the door panel (vertical axis) | outward, swinging forward (rotate around local Y) |
+
+Rules:
+- State lives in `configStore`: `doorsOpen`, `frontTrunkOpen`, `engineLidOpen` (booleans,
+  default `false` — car starts closed). One `doorsOpen` boolean controls **both** doors
+  symmetrically; independent left/right control is future work, not required now.
+- Each openable part is its own mesh (or group of meshes, e.g. the engine lid + its vent
+  louvers) wrapped in a `<group>` positioned at the hinge point, with the mesh offset from that
+  group's local origin — rotating the group swings the part around the hinge, not around its
+  own center. This is the same "wrap in a group positioned at the pivot" pattern already used
+  for the body-lift suspension group.
+- Doors need a **real door panel mesh** distinct from the body (the old crease-only
+  representation — a seam line painted onto the body — cannot open, since there's nothing to
+  rotate). The panel approximates the door's curved area with a flat-ish box; it won't perfectly
+  seam-match the underlying curved `LOWER_BODY`/`CABIN` shells at all rotation angles — that's
+  an accepted approximation for a primitive placeholder, not a bug to chase further.
+- No physics/collision — parts can open regardless of camera angle or each other; this is a
+  visual toggle, not a simulation.
+- Toggle controls live in `ConfigPanel.tsx` under an "Openable Parts" section (see
+  [config-panel.spec.md](config-panel.spec.md)).
+
+## Interior — [implemented, with a documented approximation]
+
+- **Dashboard**: a low dark panel spanning the cabin width at the front of the interior,
+  roughly where the real dash sits (below the windshield, above the pedal area).
+- **Steering wheel**: a torus (rim) + 2 spokes + column, driver's side, reactive to
+  `steeringWheelOptions[selected].rimMaterial`:
+  - `plastic` → black, standard tube thickness
+  - `wood` → warm brown/wood-tone rim color
+  - `sport` → dark grey/black, thinner tube (slimmer "banana" look)
+  This is the concrete "steering wheel must be visible" requirement.
+- **Seats** (driver + passenger, simplified as a cushion + backrest box pair): color reactive to
+  `interiorOptions[selected].hex`.
+- **Visibility is a deliberate approximation, not true occlusion**: the exterior body (§ Exterior
+  body above) is 4 *solid* overlapping ellipsoids with no actual cavity anywhere — `LOWER_BODY`
+  and `CABIN` together solidly fill the car's entire cross-section, so anything positioned
+  "inside" is geometrically buried in opaque paint regardless of glass transparency or door
+  state. Confirmed by point-in-ellipsoid math, not just by looking at a render — see
+  `.claude/memory/context.md` 2026-07-17 entry. Fix shipped: all interior meshes render with
+  `depthTest={false}` and a higher `renderOrder` (`INTERIOR_RENDER_ORDER` in `FuscaModel.tsx`),
+  i.e. they draw on top unconditionally. This means the interior is **always visible from any
+  angle**, not actually hidden by closed doors/body — an intentional "always visible" cheat, not
+  a bug. Revisit only if/when the body gets real hollow geometry (GLTF rework, `docs/SDD.md` §6).
+- The `ConfigPanel.tsx` spec sheet's old "not visually modeled" caveat for steering wheel and
+  interior is removed — see [config-panel.spec.md](config-panel.spec.md).
+
+## Materials — [implemented]
 
 - **Body paint**: physical material with clearcoat (`clearcoat`, `clearcoatRoughness`) for an
-  automotive-gloss look, not a flat `meshStandardMaterial`. `finish` (`gloss | matte | metallic
-  | patina`) still drives roughness/metalness/clearcoat intensity.
-- **Glass** (windshield/rear window/side windows): dark, semi-transparent, distinct material
-  from body paint and from each other only in transparency/tint — shape is what differentiates them.
-- **Chrome trim** (bumpers, handles, running boards, window surrounds): high metalness, low
-  roughness, consistent across the model.
+  automotive-gloss look. `finish` (`gloss | matte | metallic | patina`) drives
+  roughness/metalness/clearcoat intensity.
+- **Glass**: dark, semi-transparent, distinct from body paint.
+- **Chrome trim** (bumpers, handles, running boards): high metalness, low roughness.
+- **Interior**: seats use `meshStandardMaterial` at moderate roughness (fabric/vinyl, not
+  glossy); steering wheel rim material varies by `rimMaterial` per the table above.
+
+## Accuracy criteria (vs. the reference vehicle)
+
+- Every dimension in the table above must stay within the tolerances implied by
+  `reference-vehicle.spec.md` — if reference photos/video are re-measured and a constant
+  changes, update this table and the code constants together, in the same change.
+- "Accurate" for this placeholder means: correct proportions (§ dimensions), a body composition
+  that reads unambiguously as a Beetle silhouette (§ exterior body), and config-reactive details
+  matching what's visible in `reference/fusca-photos/` (taillight shape, wheel style, steering
+  wheel style). It does **not** mean pixel-accurate panel lines or a photoreal surface — that
+  requires the GLTF rework tracked in `docs/SDD.md` §6, not more primitive tuning.
+- When in doubt about a shape/proportion question, check the photos in
+  `reference/fusca-photos/` before guessing — it's local, git-ignored, and free to consult.
 
 ## Explicitly out of scope for the placeholder
 
 - Photoreal image textures / UV-mapped materials (needs a real mesh + texture pipeline — future GLTF work).
-- Opening doors/animated parts.
-- Interior geometry visible through the windows (interior choice stays spec-sheet-only per [config-panel.spec.md](config-panel.spec.md)).
+- Independent left/right door control, or any part opening via physics/animation easing — instant open/closed toggle only.
+- Occlusion-correct interior cutaway geometry (see Interior section above).
+- Engine bay detail beyond the existing vent louvers — no visible engine block, even with the lid open.

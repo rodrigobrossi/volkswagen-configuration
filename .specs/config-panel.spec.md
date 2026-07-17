@@ -11,10 +11,14 @@
 6. **Steering Wheel** — swatch row over `steeringWheelOptions`.
 7. **Interior** — swatch row (color dot) over `interiorOptions`.
 8. **Engine** — swatch row over `engineOptions`.
-9. **Spec Sheet** — plain-text summary of the fields *not* visually rendered in 3D (currently:
-   interior, steering wheel, engine — keep this list in sync with
-   [3d-model.spec.md](3d-model.spec.md)'s "explicitly out of scope" section; when a field
-   becomes 3D-rendered, remove it from the spec sheet).
+9. **Openable Parts** — three toggle buttons: Doors (`doorsOpen`), Porta-malas / front trunk
+   (`frontTrunkOpen`), Tampa do Motor / engine lid (`engineLidOpen`). Each toggles the
+   corresponding `configStore` boolean; label reflects state (e.g. "Doors: Open" / "Doors:
+   Closed"). See [3d-model.spec.md](3d-model.spec.md) Openable Parts section for what actually
+   moves in the 3D view.
+10. **Spec Sheet** — plain-text summary of the fields *not* visually rendered in 3D (currently:
+    engine only — steering wheel and interior are now 3D-rendered per
+    [3d-model.spec.md](3d-model.spec.md)'s Interior section, so they're removed from this list).
 
 ## Behavior rules
 

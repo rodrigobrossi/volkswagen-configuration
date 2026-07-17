@@ -50,8 +50,6 @@ function SwatchRow<T extends { id: string; label: string }>({
 export function ConfigPanel() {
   const state = useConfigStore()
 
-  const selectedInterior = interiorOptions.find((i) => i.id === state.interiorId)!
-  const selectedSteering = steeringWheelOptions.find((s) => s.id === state.steeringWheelId)!
   const selectedEngine = engineOptions.find((e) => e.id === state.engineId)!
   const selectedChassis = chassisYears.find((c) => c.id === state.chassisYearId)!
 
@@ -146,10 +144,34 @@ export function ConfigPanel() {
         />
       </Section>
 
+      <Section title="Openable Parts">
+        <div className="swatch-row">
+          <button
+            type="button"
+            className={`swatch-btn${state.doorsOpen ? ' active' : ''}`}
+            onClick={() => state.toggleDoors()}
+          >
+            Doors: {state.doorsOpen ? 'Open' : 'Closed'}
+          </button>
+          <button
+            type="button"
+            className={`swatch-btn${state.frontTrunkOpen ? ' active' : ''}`}
+            onClick={() => state.toggleFrontTrunk()}
+          >
+            Porta-malas: {state.frontTrunkOpen ? 'Open' : 'Closed'}
+          </button>
+          <button
+            type="button"
+            className={`swatch-btn${state.engineLidOpen ? ' active' : ''}`}
+            onClick={() => state.toggleEngineLid()}
+          >
+            Tampa do Motor: {state.engineLidOpen ? 'Open' : 'Closed'}
+          </button>
+        </div>
+      </Section>
+
       <Section title="Spec Sheet">
         <ul className="spec-list">
-          <li>Interior: {selectedInterior.label}</li>
-          <li>Steering wheel: {selectedSteering.label}</li>
           <li>
             Engine: {selectedEngine.label} — {selectedEngine.parts.join(', ')}
           </li>

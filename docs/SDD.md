@@ -15,6 +15,8 @@ viewer: chassis year, wheels, steering wheel, suspension height, exterior color,
 and engine, plus one-click style presets (Cal Look, Baja Bug, Rat Look/Patina, Resto Stock,
 Rebaixado BR street, and a preset approximating the owner's real reference car). Every change
 updates the live 3D model instantly. The viewer also runs as a 360° auto-rotating turntable.
+Doors, the front trunk (porta-malas), and the engine lid (tampa do motor) can be opened; a
+steering wheel and simplified seats are visible in the cabin.
 
 Non-goals for now: photorealistic rendering, a full historically-verified parts catalog,
 mobile-first layout, or a backend (everything is client-side/static data).
@@ -24,10 +26,11 @@ mobile-first layout, or a backend (everything is client-side/static data).
 ```
 src/
   data/fusca.ts        — static reference data (source of truth for all option lists)
-  store/configStore.ts — zustand store: active config + actions (set, applyPreset, toggleAutoRotate)
+  store/configStore.ts — zustand store: active config + actions (set, applyPreset,
+                          toggleAutoRotate, toggleDoors, toggleFrontTrunk, toggleEngineLid)
   components/
     Scene.tsx           — R3F Canvas, lighting, ground, OrbitControls (incl. 360° auto-rotate)
-    FuscaModel.tsx       — the car mesh, entirely driven by reading the config store
+    FuscaModel.tsx       — the car mesh + interior + openable parts, entirely driven by the config store
     Wheel.tsx            — wheel/tire mesh, parameterized by rim color + tire profile
     ConfigPanel.tsx      — sidebar UI: reads/writes the store, renders option lists from data/fusca.ts
   App.tsx               — layout: viewer pane (Scene + 360° toggle button) + ConfigPanel
@@ -45,10 +48,10 @@ relevant component.
 |---|---|---|
 | `ChassisYear` | `id, label, yearRange, bodyStyle, taillightShape, note` | `taillightShape` (`round \| square \| vertical-oval`) drives which taillight mesh `FuscaModel` renders — kept as an explicit field rather than inferred from `bodyStyle`, since taillight shape and body era don't always move together historically. |
 | `WheelOption` | `id, label, rimColor, tireProfile, note` | `tireProfile` (`street \| whitewall \| offroad`) drives tire width/whitewall rendering in `Wheel.tsx`. |
-| `SteeringWheelOption` | `id, label, rimMaterial, note` | Not yet visually modeled (see §6) — shown in the spec sheet only. |
+| `SteeringWheelOption` | `id, label, rimMaterial, note` | `rimMaterial` (`plastic \| wood \| sport`) drives the rendered steering wheel's color/thickness in `FuscaModel`. |
 | `SuspensionOption` | `id, label, rideHeightMm, note` | `rideHeightMm` is a relative offset from stock; `FuscaModel` converts it to a body Y-offset. |
 | `ExteriorColor` | `id, label, hex, finish` | `finish` (`gloss \| matte \| metallic \| patina`) drives roughness/metalness on the body material. |
-| `InteriorOption` | `id, label, hex, material` | Not yet visually modeled (see §6) — shown in the spec sheet only. |
+| `InteriorOption` | `id, label, hex, material` | `hex` drives the rendered seat color in `FuscaModel`; `material` isn't yet distinguished visually (fabric vs. vinyl vs. bucket all render the same seat shape). |
 | `EngineOption` | `id, label, displacementCc, parts` | Not yet visually modeled (see §6) — shown in the spec sheet only. |
 | `StylePreset` | `id, label, description, config` | Bulk-applies one value per category; `configStore.applyPreset` sets all fields + `activePresetId` in one call. |
 
@@ -90,8 +93,15 @@ the transition between auto-spin and user-driven rotation.
   per chassis year (body panels, headlight/taillight variants) instead of primitive swaps.
   No image textures yet — surface detail comes from geometry (seams, pillars, louvers) and
   clearcoat material, not UV-mapped textures.
-- **Steering wheel, interior, and engine** are data-only — reflected in the spec-sheet text,
-  not rendered in 3D. Would need an interior/cutaway view and an engine-bay view.
+- **Interior visibility is an approximation, not true occlusion**: the exterior body is solid
+  overlapping ellipsoids with no real cavity, so the dashboard/seats/steering wheel render with
+  `depthTest={false}` (always on top) rather than being properly hidden behind closed doors/
+  body panels. See `.specs/3d-model.spec.md` Interior section and the 2026-07-17 memory entry
+  for why. A real fix needs either CSG (hollow the shells) or the GLTF rework above.
+- **Engine** is still data-only — reflected in the spec-sheet text, not rendered in 3D (no
+  visible engine block even with the engine lid open, by design — see 3d-model.spec.md).
+- **Doors/trunk/engine lid** open instantly (no animation easing) and doors move together (no
+  independent left/right control) — both explicitly out of scope for now, see 3d-model.spec.md.
 - **Factual accuracy**: colors/trim/engine data (§3) should be verified against actual VW do
   Brasil production records if exactness per year matters for the product.
 - **Mobile layout**: current two-pane layout is fixed-width desktop only.

@@ -11,6 +11,46 @@ update those when structure changes, and add an entry here for *why*.
 
 ---
 
+## 2026-07-17 (later still) — Openable doors/trunk/engine lid + interior, final 3d-model.spec.md
+
+- User asked to make `.specs/3d-model.spec.md` the "final version," covering interior,
+  opening doors, a visible steering wheel, opening front trunk (porta-malas) and engine lid
+  (tampa do motor), and accuracy vs. the reference car. Rewrote the spec to cover all of it
+  (marked `[implemented]` vs `[target]`), then implemented the target sections rather than
+  leaving them as pure documentation — see `.specs/3d-model.spec.md` for the current spec.
+- **Trunk/engine lid**: reused the existing `HOOD`/`REAR_DECK` meshes as the lids, wrapped each
+  in a `<group>` positioned at a hinge point (near the cowl for the trunk, near the cabin for
+  the engine lid) with the mesh offset from that group's local origin — rotating the group
+  swings the part around the hinge instead of its own center. `configStore.frontTrunkOpen` /
+  `engineLidOpen` booleans drive the rotation directly (no easing/animation). Verified both
+  open convincingly in the browser on the first working attempt once the hinge-offset math was
+  right — no sign-flip debugging needed this time (see the rotation.y torus lesson below from
+  earlier in the day, applied proactively here for the X-axis rotations).
+- **Doors**: the old crease-only "seam painted on the body" couldn't open — nothing to rotate.
+  Replaced with a real box panel mesh, hinged at its front edge (`rotation.y`, not `rotation.x`
+  like the lids since doors swing on a vertical axis). Bug caught by screenshot: first pass
+  hardcoded the panel color to black instead of `exteriorColor.hex` — always check a new mesh's
+  material against the existing color-reactive pattern before screenshotting, not after.
+- **Interior visibility — a real structural limitation, not just tuning**: the exterior body is
+  4 *solid* overlapping ellipsoids (see the shoulder/beltline entry above) with no actual cavity
+  anywhere — `LOWER_BODY` and `CABIN` together solidly fill the entire y-range of the car, so
+  anything positioned "inside" (dashboard, seats, steering wheel) is geometrically buried inside
+  opaque paint regardless of doors or window transparency. Confirmed this by hand (ellipsoid
+  point-in-solid test) before trying to fix it, rather than guessing from the render. Real fix
+  would be hollowing the shells (no CSG available without an extra library) — out of scope for
+  now. Pragmatic fix shipped instead: interior meshes render with `depthTest={false}` + a higher
+  `renderOrder`, i.e. they always draw on top regardless of what's technically in front. This is
+  a deliberate, documented approximation (see `.specs/3d-model.spec.md` Interior section) — an
+  "always visible" cheat, not true occlusion. If this ever gets confusing to look at from some
+  angle, that's the mechanism to revisit, not a rendering bug to chase.
+- **Steering wheel** reacts to `steeringWheelOptions[selected].rimMaterial` (color + tube
+  thickness); **seats** react to `interiorOptions[selected].hex`. Both previously data-only,
+  spec-sheet-only fields — removed from the `ConfigPanel` spec sheet now that they're rendered
+  (see `.specs/config-panel.spec.md`).
+- New `ConfigPanel` "Openable Parts" section: 3 toggle buttons (Doors / Porta-malas / Tampa do
+  Motor), Portuguese labels for the two engine-compartment ones since that's the natural term
+  for this product (PT-BR first, per `docs/SDD.md`).
+
 ## 2026-07-17 (later) — Body shape overhaul: single ellipsoid doesn't read as a car
 
 - User feedback after the first fidelity pass (screenshot attached): still "far from a beetle,"
