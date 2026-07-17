@@ -25,7 +25,19 @@ apply to wheel placement and camera framing.
 A conforming render must include, all reactive to the config store where noted:
 
 - **Wheels** (4) at `±TRACK/2` × `±WHEELBASE/2`, wheel style/tire profile reactive — see `Wheel.tsx`.
-- **Body shell**: front hood, main cabin, rear engine cover, fit inside the `LENGTH`×`WIDTH`×`HEIGHT` envelope. Color/finish reactive to `exteriorColorId`.
+- **Body shell** is **4 overlapping ellipsoids, not 1** — a single symmetric shell reads as a
+  blob/egg, not a car (learned the hard way, see `.claude/memory/context.md`):
+  - `LOWER_BODY` — wide, low, spans nearly the full length.
+  - `HOOD` — low, tapering, front.
+  - `REAR_DECK` — low, tapering, rear, slightly taller than `HOOD`.
+  - `CABIN` — **distinctly narrower and taller** than `LOWER_BODY`, rear-biased. The
+    width/height gap between `CABIN` and `LOWER_BODY` is what creates a visible shoulder/
+    beltline — this is the one detail that most determines whether it reads as a car. Do not
+    collapse these back into one shell.
+  - **Fender arches**: a half-torus (`arc ≈ 1.1π`, standing in the Y-Z plane via
+    `rotation.y = π/2`) over each wheel, body-colored, so the wheels visually tie into the body
+    instead of floating underneath with a gap.
+  All fit inside the `LENGTH`×`WIDTH`×`HEIGHT` envelope. Color/finish reactive to `exteriorColorId`.
 - **Windshield** — a distinct raked glass pane at the front of the greenhouse, not merged with the side/rear glass into one shape.
 - **Rear window** — a distinct raked glass pane at the back, smaller than the windshield.
 - **Two side door windows** (left + right only — the Fusca is a 2-door car, no rear doors) — distinct rectangular panes at door height.

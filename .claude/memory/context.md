@@ -11,6 +11,34 @@ update those when structure changes, and add an entry here for *why*.
 
 ---
 
+## 2026-07-17 (later) — Body shape overhaul: single ellipsoid doesn't read as a car
+
+- User feedback after the first fidelity pass (screenshot attached): still "far from a beetle,"
+  proportions wrong, doors/windows too subtle to register. Root cause: a single stretched
+  sphere is front-back *symmetric* and has no visible break between "body" and "roof" — no
+  amount of recalibrating one ellipsoid's dimensions fixes that, it will always read as an egg.
+- Rebuilt the body as **4 overlapping ellipsoids** instead of 1: a wide low `LOWER_BODY`
+  spanning nearly the full length, a low tapering `HOOD` (front) and slightly taller
+  `REAR_DECK`, and a distinctly **narrower + taller + rear-biased** `CABIN`. The width/height
+  gap between `CABIN` and `LOWER_BODY` is what creates a visible shoulder/beltline — this was
+  the single biggest lever for "looks like a car" vs "looks like a blob." See
+  `.specs/3d-model.spec.md` for the exact constants.
+- Added smooth fender arches (a half-torus per wheel, `rotation.y = Math.PI/2` to stand it in
+  the Y-Z plane, `arc = Math.PI * 1.1`) so wheels visually tie into the body instead of looking
+  like separate cylinders poking out underneath. First attempt used a chain of small spheres
+  along the arc — worked but read as a "pearl necklace," replaced with a single torus mesh once
+  verified the rotation/arc-direction math was right (checked via screenshot, not assumed).
+  **The torus arc-direction convention that worked**: local angle 0 sweeps from local +X; after
+  `rotation.y = Math.PI/2`, local +X maps to world -Z, so arc sweeps from -Z through +Y (top)
+  toward +Z — i.e. an arc from `0` to `π` traces back-to-front over the top of the wheel.
+- Also bumped up window-pillar and door-crease thickness (0.02→0.03, height ×1.7→×1.8) — they
+  were geometrically correct but too thin to read as distinct elements at this scale.
+- Lesson for next time: when nesting glass/pillars/doors against a curved primitive body,
+  always derive their position/size from that body's own ellipsoid equation (see
+  `halfWidthAt()` / `Pillar`'s inline math in `FuscaModel.tsx`) — a straight element at a fixed
+  offset will float off a curved surface almost everywhere except the one point it was tuned
+  for. This bit twice now (first pass had this bug too, in the single-shell version).
+
 ## 2026-07-17 — Specs, skill, memory scaffolding + 3D fidelity pass
 
 - Added `.specs/` — granular per-module specs (data model, 3D model, scene/viewer, config
