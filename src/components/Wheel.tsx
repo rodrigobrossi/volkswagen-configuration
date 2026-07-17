@@ -6,8 +6,8 @@ interface WheelProps {
 }
 
 export function Wheel({ position, wheel }: WheelProps) {
-  const tireWidth = wheel.tireProfile === 'offroad' ? 0.34 : 0.24
-  const tireRadius = wheel.tireProfile === 'offroad' ? 0.42 : 0.38
+  const tireWidth = wheel.tireProfile === 'offroad' ? 0.28 : 0.2
+  const tireRadius = wheel.tireProfile === 'offroad' ? 0.36 : 0.32
   const showWhitewall = wheel.tireProfile === 'whitewall'
 
   return (

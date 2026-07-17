@@ -2,6 +2,12 @@
 
 **Status:** Working prototype. Living document — update as the model/architecture evolves.
 
+**Detailed specs:** [.specs/](../.specs/) has per-module, prescriptive specs (dimensions,
+required elements, invariants) — this document is the narrative overview; `.specs/` is the
+checklist to conform to when changing code. **Project history/decisions:**
+[.claude/memory/context.md](../.claude/memory/context.md). **Adding a catalog option:** use the
+`/add-catalog-option` skill rather than editing `data/fusca.ts` freestyle.
+
 ## 1. Overview & Goals
 
 A web app to configure a Volkswagen Fusca (Beetle, Brazilian market) in an interactive 3D
@@ -77,9 +83,13 @@ the transition between auto-spin and user-driven rotation.
 
 ## 6. Known Gaps / Future Work
 
-- **Body mesh**: still primitive-geometry (spheres/boxes/cylinders), not a real Fusca mesh.
-  Next step would be a proper GLTF model, ideally with swappable parts per chassis year
-  (body panels, headlight/taillight variants) instead of primitive swaps.
+- **Body mesh**: still primitive-geometry (spheres/boxes/cylinders), not a real Fusca mesh —
+  now calibrated to real-world dimensions with distinct doors/windows/trim (see
+  [.specs/3d-model.spec.md](../.specs/3d-model.spec.md)), but it's a better-fitted placeholder,
+  not a faithful likeness. Next step would be a proper GLTF model, ideally with swappable parts
+  per chassis year (body panels, headlight/taillight variants) instead of primitive swaps.
+  No image textures yet — surface detail comes from geometry (seams, pillars, louvers) and
+  clearcoat material, not UV-mapped textures.
 - **Steering wheel, interior, and engine** are data-only — reflected in the spec-sheet text,
   not rendered in 3D. Would need an interior/cutaway view and an engine-bay view.
 - **Factual accuracy**: colors/trim/engine data (§3) should be verified against actual VW do
