@@ -11,6 +11,35 @@ update those when structure changes, and add an entry here for *why*.
 
 ---
 
+## 2026-07-17 (evening) — Mirrors, indicators, two-tone taillights, wheel spoke geometry
+
+- User asked for the model to "consider glass windows and everything that details this model":
+  mirrors, indicator (turn signal) lights, front/rear headlights, and wheels that look like
+  their real style rather than just changing color.
+- Added `WheelOption.rimStyle` (`hubcap | five-spoke | multi-spoke`) to `data/fusca.ts` and
+  rewrote `Wheel.tsx`'s rim rendering (`WheelFace`) to build actual spoke geometry per style
+  (N boxes fanned out via `rotation.y` steps in the disc's own local plane + a torus rim lip +
+  center hub) instead of one flat colored disc. Mapped existing wheels: EMPI → `five-spoke`,
+  BRM → `multi-spoke` (10 thin spokes), everything else → `hubcap`. Verified all three read as
+  visually distinct in the browser (EMPI's 5 spokes, BRM's dense 10-spoke pattern, plain hubcap).
+- Added side mirrors (arm + housing + dark glass face, body-colored) near the A-pillar, reusing
+  `DOOR_X`/`DOOR_HINGE_Z` for positioning rather than new magic numbers.
+- Added front turn-signal indicators (amber, fender-mounted between headlight and windshield) —
+  a detail directly visible in `reference/fusca-photos/`, not invented.
+- Taillights are now **two-toned** (amber turn-signal section stacked over red brake/tail
+  section) for all three `taillightShape` variants, instead of a single uniform red blob —
+  also matches the reference photos, which clearly show amber-over-red rear lights.
+- Added a chrome beltline trim strip (each side, at the `CABIN`/`LOWER_BODY` shoulder line) —
+  covers the "everything that details this model" / window-trim part of the ask without trying
+  to wrap a literal chrome ring around the curved glass dome (would hit the same
+  straight-element-vs-curved-surface problem as the door/pillar work earlier — not worth it for
+  a thin trim strip that reads fine as a straight line at the relatively flat beltline region).
+- Updated `.specs/3d-model.spec.md` (Exterior body, new Lights/Mirrors/Wheels subsections) and
+  `.specs/data-model.spec.md` (added `rimStyle`, corrected `SteeringWheelOption`/`InteriorOption`
+  rows that were stale from the earlier "data-only" era) in the same change.
+
+---
+
 ## 2026-07-17 (later still) — Openable doors/trunk/engine lid + interior, final 3d-model.spec.md
 
 - User asked to make `.specs/3d-model.spec.md` the "final version," covering interior,

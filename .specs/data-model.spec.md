@@ -8,12 +8,12 @@ they import from here and look up by id.
 | Type | Required fields | Invariants |
 |---|---|---|
 | `ChassisYear` | `id, label, yearRange, bodyStyle, taillightShape, note` | `taillightShape` ∈ `round \| square \| vertical-oval`; `FuscaModel` must have a render branch for every value in use. |
-| `WheelOption` | `id, label, rimColor, tireProfile, note` | `tireProfile` ∈ `street \| whitewall \| offroad`; `Wheel.tsx` must handle every value in use. |
-| `SteeringWheelOption` | `id, label, rimMaterial, note` | Data-only today (spec-sheet display, not 3D-rendered — see [3d-model.spec.md](3d-model.spec.md) scope). |
+| `WheelOption` | `id, label, rimColor, rimStyle, tireProfile, note` | `rimStyle` ∈ `hubcap \| five-spoke \| multi-spoke`, `tireProfile` ∈ `street \| whitewall \| offroad`; `Wheel.tsx`'s `WheelFace` must handle every `rimStyle` value in use. |
+| `SteeringWheelOption` | `id, label, rimMaterial, note` | `rimMaterial` ∈ `plastic \| wood \| sport`; `FuscaModel`'s `SteeringWheel` must handle every value in use (drives rim color + tube thickness). |
 | `SuspensionOption` | `id, label, rideHeightMm, note` | `rideHeightMm` relative to stock (0), negative = lowered. `FuscaModel` converts to a body Y-offset. |
 | `ExteriorColor` | `id, label, hex, finish` | `finish` ∈ `gloss \| matte \| metallic \| patina`; each must map to a distinct roughness/metalness/clearcoat tuple in `FuscaModel`. |
-| `InteriorOption` | `id, label, hex, material` | Data-only today (spec-sheet display). |
-| `EngineOption` | `id, label, displacementCc, parts` | Data-only today (spec-sheet display). |
+| `InteriorOption` | `id, label, hex, material` | `hex` drives the rendered seat color; `material` isn't yet visually distinguished (see [3d-model.spec.md](3d-model.spec.md)). |
+| `EngineOption` | `id, label, displacementCc, parts` | Data-only (spec-sheet display) — no 3D engine bay. |
 | `StylePreset` | `id, label, description, config` | `config` must reference a valid id in every one of the six catalogs above — a preset pointing at a missing id is a bug. |
 
 ## Rules for adding an entry

@@ -23,6 +23,7 @@ export interface WheelOption {
   id: string
   label: string
   rimColor: string
+  rimStyle: 'hubcap' | 'five-spoke' | 'multi-spoke'
   tireProfile: 'street' | 'whitewall' | 'offroad'
   note: string
 }
@@ -117,6 +118,7 @@ export const wheelOptions: WheelOption[] = [
     id: 'steel-stock',
     label: 'Steel Stock',
     rimColor: '#c9cdd1',
+    rimStyle: 'hubcap',
     tireProfile: 'street',
     note: 'Painted steel wheel, factory look.',
   },
@@ -124,6 +126,7 @@ export const wheelOptions: WheelOption[] = [
     id: 'whitewall-classic',
     label: 'Chrome + Whitewall',
     rimColor: '#e8e8e2',
+    rimStyle: 'hubcap',
     tireProfile: 'whitewall',
     note: 'Chrome rim with whitewall tire, classic resto style.',
   },
@@ -131,20 +134,23 @@ export const wheelOptions: WheelOption[] = [
     id: 'empi-5-spoke',
     label: 'EMPI 5-Spoke',
     rimColor: '#f2f2f2',
+    rimStyle: 'five-spoke',
     tireProfile: 'street',
-    note: 'Popular aftermarket alloy wheel in the Cal Look scene.',
+    note: 'Popular aftermarket alloy wheel in the Cal Look scene, 5 visible spokes.',
   },
   {
     id: 'brm-style',
     label: 'BRM-Style',
     rimColor: '#d8b23a',
+    rimStyle: 'multi-spoke',
     tireProfile: 'street',
-    note: 'BRM-inspired wheel, a Brazilian custom-scene favorite.',
+    note: 'BRM-inspired wheel, a Brazilian custom-scene favorite, 10 thin spokes around a small center cap.',
   },
   {
     id: 'baja-offroad',
     label: 'Baja Off-Road',
     rimColor: '#3b3b3b',
+    rimStyle: 'five-spoke',
     tireProfile: 'offroad',
     note: 'Wide knobby tire on a steel rim, for Baja Bug builds.',
   },
@@ -152,6 +158,7 @@ export const wheelOptions: WheelOption[] = [
     id: 'aco-hubcap',
     label: 'Aço + Calota (Meu Fusca)',
     rimColor: '#c7c9c7',
+    rimStyle: 'hubcap',
     tireProfile: 'street',
     note: 'Painted steel wheel with a small chrome hubcap, matching the reference photos closely.',
   },

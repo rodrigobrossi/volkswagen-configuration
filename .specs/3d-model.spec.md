@@ -45,10 +45,28 @@ All fit inside the `LENGTH`×`WIDTH`×`HEIGHT` envelope. Color/finish reactive t
 pillars — see `Pillar` in `FuscaModel.tsx`. Two side door windows (left + right only — the Fusca
 is a 2-door car).
 
-**Fixed trim**: running boards, front/rear bumpers (chrome), headlights (2, round), taillights
-(2, shape reactive to `chassisYear.taillightShape`: `round | square | vertical-oval`), hood
-centerline seam, rear engine-lid vent louvers (must move with the engine lid when it opens — see
-below).
+**Fixed trim**: running boards, front/rear bumpers (chrome), chrome beltline trim strip (each
+side, at the `CABIN`/`LOWER_BODY` shoulder line), hood centerline seam, rear engine-lid vent
+louvers (must move with the engine lid when it opens — see below).
+
+**Lights**:
+- **Headlights** (2, round, front).
+- **Front turn signal indicators** (2, amber, mounted on top of the front fenders between the
+  headlights and windshield — matches `reference/fusca-photos/`, not just invented).
+- **Taillights** (2, shape reactive to `chassisYear.taillightShape`: `round | square |
+  vertical-oval`) are **two-toned**: an amber turn-signal section over a red brake/tail section,
+  stacked vertically — not a single uniform red blob. Matches the reference photos, which show
+  amber-over-red taillights.
+
+**Mirrors**: 2, mounted near the A-pillar (front edge of the door) — mount arm + housing +
+dark glass face, body-colored housing reactive to `exteriorColorId`.
+
+**Wheels**: rim geometry (not just color) varies by `wheelOptions[selected].rimStyle` — see
+`Wheel.tsx`:
+- `hubcap` — solid disc + raised dome center, for steel/hubcap-style wheels.
+- `five-spoke` — 5 distinct radiating spokes + outer rim lip + small center hub (EMPI-style).
+- `multi-spoke` — 10 thin spokes + outer rim lip + small center hub (BRM-style).
+Both faces of each wheel render the spoke pattern (see `WheelFace` in `Wheel.tsx`).
 
 ## Openable parts — [implemented]
 

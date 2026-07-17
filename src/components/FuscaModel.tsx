@@ -141,6 +141,71 @@ function Pillar({ z }: { z: number }) {
   )
 }
 
+// Side mirrors: mounted near the A-pillar (front edge of the door), body-colored housing with
+// a dark glass face on the outward side.
+const MIRROR_Y = 0.72
+const MIRROR_Z = DOOR_HINGE_Z + 0.08
+
+function Mirror({
+  side,
+  color,
+  materialProps,
+}: {
+  side: 1 | -1
+  color: string
+  materialProps: Record<string, number>
+}) {
+  const x = side * (DOOR_X + 0.02)
+  return (
+    <group position={[x, MIRROR_Y, MIRROR_Z]}>
+      {/* Arm */}
+      <mesh position={[side * 0.035, 0, 0]}>
+        <boxGeometry args={[0.06, 0.018, 0.018]} />
+        <meshPhysicalMaterial color={color} {...materialProps} />
+      </mesh>
+      {/* Housing */}
+      <mesh position={[side * 0.1, 0, 0]}>
+        <boxGeometry args={[0.025, 0.08, 0.12]} />
+        <meshPhysicalMaterial color={color} {...materialProps} />
+      </mesh>
+      {/* Mirror glass */}
+      <mesh position={[side * 0.113, 0, 0]}>
+        <boxGeometry args={[0.005, 0.06, 0.09]} />
+        <meshStandardMaterial color="#0a0e12" metalness={0.9} roughness={0.1} />
+      </mesh>
+    </group>
+  )
+}
+
+// Front turn signal indicators: small amber lights on top of the front fenders, between the
+// headlights and the windshield — a classic Beetle detail visible in reference/fusca-photos.
+const INDICATOR_Y = 0.58
+const INDICATOR_Z = HALF_L * 0.62
+const INDICATOR_X = HALF_W * 0.76
+
+function IndicatorLight({ side }: { side: 1 | -1 }) {
+  return (
+    <mesh position={[side * INDICATOR_X, INDICATOR_Y, INDICATOR_Z]} scale={[0.7, 0.6, 1.3]}>
+      <sphereGeometry args={[0.06, 12, 12]} />
+      <meshStandardMaterial color="#f0a030" emissive="#c07000" emissiveIntensity={0.35} />
+    </mesh>
+  )
+}
+
+// Chrome trim strip along the beltline (where CABIN meets LOWER_BODY) — a real Fusca detail
+// visible in reference/fusca-photos, and a good visual anchor for the shoulder line.
+const TRIM_Y = 0.64
+
+function BeltlineTrim({ side }: { side: 1 | -1 }) {
+  const x = side * (halfWidthAt(LOWER_BODY, TRIM_Y) + 0.015)
+  return (
+    <mesh position={[x, TRIM_Y, -0.1]}>
+      <boxGeometry args={[0.012, 0.02, WHEELBASE * 0.92]} />
+      <meshStandardMaterial {...CHROME} />
+    </mesh>
+  )
+}
+
 const ARCH_RADIUS = WHEEL_RADIUS + 0.1
 
 // A smooth half-ring (torus, arc=π) arcing over the top of each wheel from back to front,
@@ -362,6 +427,14 @@ export function FuscaModel() {
         <DoorDetails side={1} open={doorsOpen} color={exteriorColor.hex} materialProps={bodyMaterialProps} />
         <DoorDetails side={-1} open={doorsOpen} color={exteriorColor.hex} materialProps={bodyMaterialProps} />
 
+        {/* Mirrors */}
+        <Mirror side={1} color={exteriorColor.hex} materialProps={bodyMaterialProps} />
+        <Mirror side={-1} color={exteriorColor.hex} materialProps={bodyMaterialProps} />
+
+        {/* Chrome beltline trim */}
+        <BeltlineTrim side={1} />
+        <BeltlineTrim side={-1} />
+
         {/* Running boards */}
         <mesh position={[halfWidthAt(LOWER_BODY, 0.08) + 0.04, 0.05, 0]}>
           <boxGeometry args={[0.06, 0.025, WHEELBASE * 0.85]} />
@@ -394,14 +467,27 @@ export function FuscaModel() {
           <meshStandardMaterial color="#fdfdf0" emissive="#fdfdc0" emissiveIntensity={0.3} />
         </mesh>
 
-        {/* Taillights - shape reflects chassis era */}
+        {/* Front turn signal indicators */}
+        <IndicatorLight side={1} />
+        <IndicatorLight side={-1} />
+
+        {/* Taillights - shape reflects chassis era. Two-toned (amber turn signal over red
+            brake/tail), matching reference/fusca-photos, instead of a single red blob. */}
         {taillightShape === 'round' && (
           <>
-            <mesh position={[HALF_W * 0.86, 0.42, -HALF_L * 0.86]}>
+            <mesh position={[HALF_W * 0.86, 0.47, -HALF_L * 0.86]} scale={[1, 0.55, 1]}>
+              <sphereGeometry args={[0.12, 16, 16]} />
+              <meshStandardMaterial color="#e0902a" emissive="#a05e00" emissiveIntensity={0.35} />
+            </mesh>
+            <mesh position={[HALF_W * 0.86, 0.38, -HALF_L * 0.86]} scale={[1, 0.55, 1]}>
               <sphereGeometry args={[0.12, 16, 16]} />
               <meshStandardMaterial color="#8a1f1f" emissive="#4a0000" emissiveIntensity={0.4} />
             </mesh>
-            <mesh position={[-HALF_W * 0.86, 0.42, -HALF_L * 0.86]}>
+            <mesh position={[-HALF_W * 0.86, 0.47, -HALF_L * 0.86]} scale={[1, 0.55, 1]}>
+              <sphereGeometry args={[0.12, 16, 16]} />
+              <meshStandardMaterial color="#e0902a" emissive="#a05e00" emissiveIntensity={0.35} />
+            </mesh>
+            <mesh position={[-HALF_W * 0.86, 0.38, -HALF_L * 0.86]} scale={[1, 0.55, 1]}>
               <sphereGeometry args={[0.12, 16, 16]} />
               <meshStandardMaterial color="#8a1f1f" emissive="#4a0000" emissiveIntensity={0.4} />
             </mesh>
@@ -409,23 +495,39 @@ export function FuscaModel() {
         )}
         {taillightShape === 'square' && (
           <>
-            <mesh position={[HALF_W * 0.86, 0.42, -HALF_L * 0.87]}>
-              <boxGeometry args={[0.14, 0.28, 0.06]} />
+            <mesh position={[HALF_W * 0.86, 0.49, -HALF_L * 0.87]}>
+              <boxGeometry args={[0.14, 0.12, 0.06]} />
+              <meshStandardMaterial color="#e0902a" emissive="#a05e00" emissiveIntensity={0.35} />
+            </mesh>
+            <mesh position={[HALF_W * 0.86, 0.37, -HALF_L * 0.87]}>
+              <boxGeometry args={[0.14, 0.14, 0.06]} />
               <meshStandardMaterial color="#8a1f1f" emissive="#4a0000" emissiveIntensity={0.4} />
             </mesh>
-            <mesh position={[-HALF_W * 0.86, 0.42, -HALF_L * 0.87]}>
-              <boxGeometry args={[0.14, 0.28, 0.06]} />
+            <mesh position={[-HALF_W * 0.86, 0.49, -HALF_L * 0.87]}>
+              <boxGeometry args={[0.14, 0.12, 0.06]} />
+              <meshStandardMaterial color="#e0902a" emissive="#a05e00" emissiveIntensity={0.35} />
+            </mesh>
+            <mesh position={[-HALF_W * 0.86, 0.37, -HALF_L * 0.87]}>
+              <boxGeometry args={[0.14, 0.14, 0.06]} />
               <meshStandardMaterial color="#8a1f1f" emissive="#4a0000" emissiveIntensity={0.4} />
             </mesh>
           </>
         )}
         {taillightShape === 'vertical-oval' && (
           <>
-            <mesh position={[HALF_W * 0.86, 0.4, -HALF_L * 0.86]} scale={[0.62, 1, 0.5]}>
+            <mesh position={[HALF_W * 0.86, 0.47, -HALF_L * 0.86]} scale={[0.62, 0.55, 0.5]}>
+              <sphereGeometry args={[0.18, 16, 16]} />
+              <meshStandardMaterial color="#e0902a" emissive="#a05e00" emissiveIntensity={0.35} />
+            </mesh>
+            <mesh position={[HALF_W * 0.86, 0.34, -HALF_L * 0.86]} scale={[0.62, 0.55, 0.5]}>
               <sphereGeometry args={[0.18, 16, 16]} />
               <meshStandardMaterial color="#8a1f1f" emissive="#4a0000" emissiveIntensity={0.4} />
             </mesh>
-            <mesh position={[-HALF_W * 0.86, 0.4, -HALF_L * 0.86]} scale={[0.62, 1, 0.5]}>
+            <mesh position={[-HALF_W * 0.86, 0.47, -HALF_L * 0.86]} scale={[0.62, 0.55, 0.5]}>
+              <sphereGeometry args={[0.18, 16, 16]} />
+              <meshStandardMaterial color="#e0902a" emissive="#a05e00" emissiveIntensity={0.35} />
+            </mesh>
+            <mesh position={[-HALF_W * 0.86, 0.34, -HALF_L * 0.86]} scale={[0.62, 0.55, 0.5]}>
               <sphereGeometry args={[0.18, 16, 16]} />
               <meshStandardMaterial color="#8a1f1f" emissive="#4a0000" emissiveIntensity={0.4} />
             </mesh>
