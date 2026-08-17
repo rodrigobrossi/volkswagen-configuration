@@ -247,20 +247,6 @@ export const engineOptions: EngineOption[] = [
 
 export const stylePresets: StylePreset[] = [
   {
-    id: 'cal-look',
-    label: 'Cal Look',
-    description: 'Lowered stance, EMPI wheels, minimalist chrome, sport steering wheel.',
-    config: {
-      chassisYearId: 'square-71-85',
-      wheelId: 'empi-5-spoke',
-      steeringWheelId: 'sport-banana',
-      suspensionId: 'slammed',
-      exteriorColorId: 'preto',
-      interiorId: 'black-vinyl',
-      engineId: '1600-performance',
-    },
-  },
-  {
     id: 'baja-bug',
     label: 'Baja Bug',
     description: 'Raised off-road suspension, knobby tires, rugged stock cabin.',

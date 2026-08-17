@@ -8,7 +8,7 @@ that's a bug in one of the two — fix whichever is wrong, don't let them diverg
 
 ## Real GLTF Models — [implemented]
 
-4 real, licensed 3D models (see [CREDITS.md](../CREDITS.md)) render in place of the primitive
+5 real, licensed 3D models (see [CREDITS.md](../CREDITS.md)) render in place of the primitive
 body for specific style presets/eras — an actual detailed mesh beats any amount of primitive
 tuning. Selection logic lives in `src/data/carModels.ts` (`pickRealModel`), rendering in
 `src/components/RealCarModel.tsx`, and the decision between real/primitive in
@@ -16,18 +16,21 @@ tuning. Selection logic lives in `src/data/carModels.ts` (`pickRealModel`), rend
 
 | Trigger | Model | File |
 |---|---|---|
-| `cal-look` preset | VW Beetle Florida (Cal Look) | `fusca-callook.glb` |
 | `rat-look` preset | Old VW Bug (Rat Look) | `fusca-ratlook.glb` |
 | `resto-stock` preset | 1968 Volkswagen Beetle | `fusca-1968.glb` |
+| `meu-fusca` preset | VW 1303 "Super Beetle" (1980) | `fusca-1980.glb` |
 | `oval-59-65` chassis year, no preset active | VW Typ 11 (1948) | `fusca-1948.glb` |
+
+(The former `cal-look` preset and its `fusca-callook.glb` model were removed — the preset itself
+is gone from `stylePresets`, so there is no longer a Cal Look entry in the UI.)
 | `round-66-70` chassis year, no preset active | 1968 Volkswagen Beetle | `fusca-1968.glb` |
-| Everything else (`baja-bug`, `rebaixado-br`, `meu-fusca` presets; `square-71-85`/`itamar-86-96` with no preset) | — | primitive `FuscaModel` |
+| `square-71-85` chassis year, no preset active | VW 1303 "Super Beetle" (1980) | `fusca-1980.glb` |
+| Everything else (`baja-bug`, `rebaixado-br` presets; `itamar-86-96` with no preset) | — | primitive `FuscaModel` |
 
 Priority: an **active style preset wins over chassis year** — e.g. `baja-bug` (whose
 `chassisYearId` is `round-66-70`) does *not* fall back to the stock 1968 model, which would
 misrepresent a raised/off-road build as a clean stock car. Chassis-year-only matching applies
-only when no preset is active (freeform tweaking). This is deliberate, not a gap: there's no
-real model for `square-71-85` (the user's own reference-car era) or `itamar-86-96` among what
+only when no preset is active (freeform tweaking). `itamar-86-96` has no real model among what
 was sourced — the primitive placeholder remains the only option there, and that's fine.
 
 **Two-cars-in-one-file gotcha**: `fusca-1968.glb` bundles two separate car objects in its scene
@@ -39,20 +42,213 @@ silently fails and falls back to rendering the whole scene, i.e. both cars overl
 bit once already, see `.claude/memory/context.md`).
 
 **Per-model calibration** (`carModels.ts`, `CarModelDef.calibration`): each of the 4 files was
-authored by a different artist at a different native unit scale (`fusca-callook.glb` ~100x
-meters, `fusca-1948.glb` ~1/5.6 of meters, the other two already ~meters) and not necessarily
-facing the same direction. X/Z centering and ground contact (Y) are **computed automatically**
-from each object's bounding box in `RealCarModel.tsx` — only `rotationY` and `scale` are
-manually tuned per model, and both were derived from logged bounding-box numbers divided into
-the target `LENGTH` (below), not guessed, then confirmed by screenshot.
+authored by a different artist at a different native unit scale (`fusca-1948.glb` ~1/5.6 of
+meters, `fusca-1980.glb` ~1.9x meters, the other two already ~meters) and not necessarily facing
+the same direction. X/Z centering and ground contact (Y) are
+**computed automatically** from each object's bounding box in `RealCarModel.tsx` — only
+`rotationY` and `scale` are manually tuned per model, and both were derived from logged
+bounding-box numbers divided into the target `LENGTH` (below), not guessed, then confirmed by
+screenshot.
 
-**When a real model is active**: wheel style, exterior color, interior, steering wheel, and
-openable-parts (doors/trunk/engine-lid) selections still update `configStore` normally, but
-**do not visually apply** to a real model — none of the 4 files are segmented with
-identifiable per-part nodes (materials range from clearly-named in `fusca-1968.glb` to fully
-generic `material0000..0007` in `fusca-ratlook.glb`), so per-model material overrides or a
-door-opening rig were out of scope for this pass. `ConfigPanel.tsx` shows an inline hint
-(`.real-model-hint`) when this is the case, rather than hiding/disabling the controls.
+**When a real model is active**: interior and (for models without their own baked-in cabin)
+steering wheel rim style still update `configStore` normally, but **do not visually apply** to a
+real model — no per-model geometry/material mapping exists for these yet. `ConfigPanel.tsx` shows
+an inline hint (`.real-model-hint`) when this is the case, rather than hiding/disabling the
+controls. **Doors, front trunk, and engine lid DO visually open** on the 2 models below with
+segmented node names — see "Openable parts on real models" below. **Wheel style DOES visually
+apply** on `fusca-1968.glb` and `fusca-1980.glb` — see "Real wheel swap on real models" below;
+`fusca-1948.glb` and `fusca-ratlook.glb` keep their baked wheels (each is one continuous fused
+shell with no separable wheel sub-mesh, confirmed by node-list dump, same reasoning as their lack
+of openable parts below). **Exterior color DOES visually apply** on `fusca-1948.glb`,
+`fusca-1968.glb`, and `fusca-1980.glb` — see "Body paint on real models" below;
+`fusca-ratlook.glb` opts out (its rust/patina texture would just get discolored).
+
+### Openable parts on real models — [implemented]
+
+`fusca-1968.glb` and `fusca-1980.glb` have identifiable named nodes for their
+doors/hood/engine-lid — `CarModelDef.openableParts` (`carModels.ts`) configures which node
+name(s) to detach per part, driven by the same `configStore` `doorsOpen`/`frontTrunkOpen`/
+`engineLidOpen` booleans as the primitive placeholder. Both lids on both models follow one
+pattern (**hinge at the cabin-side top edge, rotate the outer tip up**); 1968's engine/front-trunk
+`pivotZ`+`openAngle` had been set inverted (hinging at the outer tip, which swung each panel
+through a huge arc and detached it — the "opening out of scope" bug) and were corrected to match
+1980. `fusca-1948.glb` and `fusca-ratlook.glb` have no separable panels — `fusca-1948.glb`'s body
+is one continuous shell split only at the 65,535-vertex 16-bit index cap (each ~65,532-vertex
+chunk spans the whole car; there is no door/hood/trunk sub-mesh to hinge), and `fusca-ratlook.glb`
+is likewise a single fused shell — so both stay static for openable parts.
+
+Mechanism (`RealCarModel.tsx`, `riggPart()`): for each configured node, compute its own
+bounding-box edge as the hinge pivot (`pivotZ`/`pivotY` per config), create a `THREE.Group` at
+that pivot, and call `hinge.attach(node)` **while `node` is still attached to its original
+parent** — critical: `Object3D.attach()` reads `object.parent.matrixWorld` to correctly compose
+the node's new hinge-relative transform, and itself handles detaching from the old parent (via
+`add()`). Manually detaching first (`node.parent.remove(node)` before calling `attach()`) nulls
+`node.parent`, silently skipping that composition step — `attach()` then falls back to the
+node's raw pre-parent-chain local matrix, which happens to look right for shallow nodes but
+badly scrambles ones whose ancestors carry non-identity transforms (e.g. Blender/FBX-export
+coordinate-system-conversion rotations baked into intermediate parent nodes, as `fusca-1968.glb`'s
+`Root_37`/`Body_35` chain has) — this caused a full-car rendering corruption that was hard to
+diagnose because it was visible even with all parts closed (the bug is in the static rigging,
+not the open/close rotation). If a real-model door/hood/lid ever renders scrambled again, check
+this first.
+
+### Real wheel swap on real models — [implemented]
+
+`src/components/RealWheel.tsx` loads one of 3 real, licensed wheel `.glb` models (see
+CREDITS.md) and self-centers/auto-scales it to a target diameter. `wheelOptionModel` in
+`src/data/wheelModels.ts` maps each of the 6 curated `wheelOptions` onto whichever of the 3 real
+assets is the closest visual match (several options share a model — only 3 real wheel assets
+exist). `RealWheel` also accepts an optional `tint` (from `wheelOptions[selected].rimColor`),
+applied only to materials with no base-color texture, so it's a no-op on the two fully
+photo-textured wheel models (mustang64, retro) and only currently affects `wheel-57cr.glb`'s
+untextured rim material.
+
+`CarModelDef.wheelMounts` (`carModels.ts`) configures, per model, which baked wheel node(s) to
+hide and measure — undefined/empty means this model's wheels aren't separable from the body (only
+`fusca-1968.glb` and `fusca-1980.glb` have wheelMounts; `fusca-1948.glb` and `fusca-ratlook.glb`
+are each one continuous fused shell with no wheel-shaped sub-mesh at all, confirmed by dumping
+their node lists directly, not assumed). Hub position and diameter are **derived at runtime**
+from each mount's own baked geometry (`measureWheelMount()` in `RealCarModel.tsx`) — same
+"measure the real thing, don't hardcode" precedent as the engine bay sizing itself from the
+engine lid's own bounding box — rather than hardcoded per-model magic numbers.
+
+`fusca-1968.glb` has 4 distinct per-wheel nodes (`Wheel_FL_20`/`Wheel_FR_24`/`Wheel_BL_8`/
+`Wheel_BR_11`, sanitized names — see the nodeName sanitization note above), each measured with a
+plain bounding box. `fusca-1980.glb`'s `roue` (front axle) and `roue_1` (rear axle) each merge
+BOTH the left and right wheel's geometry into single meshes per component (jantes/pneus/etc.) —
+same issue as the `porte_1` merged-door node — so `wheelMounts[].splitLeftRight: true` instead
+reads each mesh's actual vertex data and splits it by world-space X sign to recover each wheel's
+real hub + diameter. `roue_1` is additionally nested as `roue`'s own child node in the raw glTF
+(confirmed via the raw node tree, not the sanitized name pattern one would expect) —
+`measureWheelMount()` only reads each mount's own DIRECT mesh children (not a full recursive
+descendant walk), which skips the nested group automatically since it's not a Mesh.
+
+Each baked wheel mount node is permanently hidden (`.visible = false`, same toggle pattern as
+`engineBayHideNodes`, but unconditional rather than tied to a door/lid state) whenever
+`wheelMounts` is configured, and 4 `RealWheel` instances are rendered in its place, one per
+measured hub. Left/right mirroring (so tread/spoke patterns face outward on both sides) is
+decided from each hub's own measured world-X sign, not from node-name L/R labels (which aren't
+reliable — `fusca-1968.glb`'s "FL"-named wheel measured on the -X side, not +X).
+
+**Not yet visually verified** (no browser available in the environment this was built in — flag
+for live tuning): each wheel model's own native axle axis (`axleRealignYaw` in `wheelModels.ts`),
+whether the mirror rotation actually reads as correctly outward-facing on both sides, and the
+exact Z/Y hub offset per model.
+
+### Body paint on real models — [implemented]
+
+`src/components/useBodyPaint.ts` repaints a real model's body-paint material(s) to match
+`exteriorColors[selectedId]` (color + finish), reacting to `configStore`'s `exteriorColorId` the
+same way `FuscaModel.tsx`'s `bodyMaterialProps`/`exteriorColor.hex` react for the procedural
+placeholder. `CarModelDef.recolorable` (`carModels.ts`) can opt a model out entirely (see below);
+otherwise the paint material(s) are found either via an explicit `CarModelDef.paintMaterialNames`
+override or, when that's absent, the SAME "largest opaque non-glass mesh volume wins" heuristic
+`findBodyColor()` (`RealCarModel.tsx`) uses for the engine-bay tint — kept as a separate
+implementation so `findBodyColor`'s own near-black skip (needed there to avoid picking small black
+interior trim over an actual textured-white paint mesh) stays untouched and that one call site
+keeps behaving identically.
+
+Per-model, confirmed by dumping each `.glb`'s materials offline (not assumed):
+- `fusca-1980.glb`: paint is `Mat_0`, a flat non-textured colour (auto-detected — it's the
+  material shared by essentially every exterior body panel, by far the largest volume). Recolor:
+  set `material.color` directly.
+- `fusca-1948.glb`: paint is `metal_schwarz`, a flat black (auto-detected — the near-black colour
+  is exactly why `useBodyPaint`'s own detection does NOT skip near-black materials the way
+  `findBodyColor`'s does). Recolor: set `material.color` directly.
+- `fusca-1968.glb`: paint is split across TWO materials, `Paint_new` and `Body` — both reference
+  the identical baked texture with a default (white) base-colour factor, confirmed offline by
+  sampling that texture (average colour ~(112,88,38)/255 with high per-pixel colour variance — a
+  genuine colored bake, not a neutral/grey map). Since the volume heuristic can only ever pick ONE
+  dominant material, both names are pinned explicitly via `paintMaterialNames`. Recolor: drop
+  `material.map` (the old bake would otherwise multiply against the new color) and set
+  `material.color`.
+- `fusca-ratlook.glb`: `recolorable: false`. All 8 materials are generic
+  `material0000..material0007` rust/patina photo textures with nothing identifiable as a distinct
+  "paint" material — tinting any of them would just discolor the weathering, undermining the "Rat
+  Look / Patina" theme the model exists to represent.
+
+Finish (`gloss | matte | metallic | patina`) maps to the same roughness/metalness pairs as
+`FuscaModel.tsx`'s `bodyMaterialProps` table, minus `clearcoat` (these GLTF materials load as
+plain `MeshStandardMaterial`, which has no clearcoat property).
+
+**Cloning, not mutating, the shared material**: `RealCarModel` clones the loaded scene
+(`scene.clone(true)`), but `THREE.Object3D.clone()` does not clone materials — every mounted
+instance of a model shares the exact same material objects coming out of `useGLTF`'s cache unless
+cloned explicitly. `useBodyPaint` clones each paint material once per mesh (flagged so later color
+changes mutate the existing clone in place rather than re-cloning) and only ever touches the
+clone — the pristine cached original is never mutated, so remounting a model (`CarModel.tsx`'s
+`key={model.key}` fully remounts `RealCarModel` on model switch) always starts from an untouched
+original with no explicit restore step needed.
+
+### Engine block — [implemented]
+
+`src/components/EngineBlock.tsx` loads `public/models/engine/scene.gltf` (see CREDITS.md),
+self-centers (X/Z centered, Y bottom at 0), and accepts `position`/`scale`/`rotation` props so
+each context can place it independently. Its materials render as authored (BaseColor + Normal +
+ORM) — the scene's procedural `RoomEnvironment` map (`Scene.tsx`) gives the metallic surfaces
+something to reflect, so no metalness-cap / depthTest trickery is needed. Rendered in two places,
+both **only while the engine lid is open** (a closed lid isn't a true hollow enclosure, so it
+can't be relied on to occlude the engine when closed):
+- `FuscaModel.tsx`, in the procedural engine bay under `REAR_DECK`.
+- `RealCarModel.tsx`, only for models with a configured `engineLid` openable part
+  (`fusca-1968.glb` and `fusca-1980.glb`). X is centered on the lid; Y sits at
+  `ENGINE_FLOOR_HEIGHT_M`; Z is **inset forward from the car's rear boundary** by
+  `ENGINE_REAR_INSET_M` so the whole block clears the inward-curving tail shell and stays inside
+  the chassis (verified against measured world bounding boxes — ~0.37–0.39 m of clearance).
+
+**Engine bay enclosure — `EngineBay.tsx`.** The real body shells have no actual cavity, so an open
+engine lid otherwise reveals the shell's dark interior as a black frame around the block. `EngineBay`
+drops an opaque, **body-coloured** open cradle (floor + cabin-side firewall + two side walls; NO top,
+NO tail-side wall) around the block. The tail is left open because a Beetle's lid hinges up at the
+rear — a rear wall would sit between the viewer and the engine and read as a box bolted to the tail;
+the car's own rear bodywork backs that side. The firewall is taller than the side walls to hide the
+cabin seats behind the block. Footprint is derived per model from the engine-lid's own bounding box
+(the lid spans the opening it covers), and the tint from `findBodyColor()` (largest opaque paint
+material, sampling its texture when the base colour is white). Some models bake an inner shell that is
+dark on its bay-facing side and occludes the engine (e.g. `fusca-1968.glb`'s `Object_59`); list those
+in `CarModelDef.engineBayHideNodes` to hide them while the lid is open (restored on close).
+
+### Interior merge for real models without one — [implemented]
+
+`src/components/RealInterior.tsx` extracts the real dashboard/seats mesh (`Object_65`, material
+`"Interior"`) and steering-wheel mesh (`Object_39`, same material) directly out of
+`fusca-1968.glb`'s own isolated "new" car subtree — not a procedural stand-in — and re-parents
+them (via `Object3D.attach()`, same technique as `riggPart()` in `RealCarModel.tsx`) into a
+shared container that any model can mount. `CarModelDef.hasInterior` (default `true`) gates this
+— `fusca-1980.glb`, `fusca-1948.glb`, and `fusca-ratlook.glb` (exterior-only / hollow shells,
+confirmed by node lists + screenshot) are `hasInterior: false` and get `RealInterior` merged in;
+`fusca-1968.glb` keeps its own baked-in cabin and is the reference the others reproduce.
+
+**Placement is derived, not hand-anchored.** The earlier version used per-model
+`interiorAnchor` fractions (`heightFraction`/`depthFraction`/`dashboardWidth`) that were guessed
+and screenshot-nudged per model, and never matched the reference well. `RealInterior` now instead
+reproduces the exact spatial relationship the interior has to 1968's OWN body: it measures the
+whole reference car's bounding box, computes where the interior's center sits as a fraction
+(0..1) of that box on each axis and how big it is relative to it, then maps that same fraction and
+relative size onto each host model's own bounding box (passed in as `hostBoxMin`/`hostBoxSize`
+from `RealCarModel.tsx`, in the host's group-local space). A single uniform scale keyed off the
+width (X) ratio keeps proportions. Result: the interior lands at the same fraction-of-
+length/width/height, and the same relative size, it occupies in the reference car — auto-adapting
+to each model's dimensions with **no per-model tuning**. `interiorAnchor` was removed entirely.
+`CarModelDef.interiorFlipZ` is the one optional per-model override: `true` mirrors the depth
+placement and facing for a model whose geometry faces `-Z` where 1968 faces `+Z` (none of the
+current three need it — 1948/1980/ratlook all share 1968's `+Z`-forward layout, verified by
+screenshot).
+
+`RealInterior` doesn't react to `steeringWheelOptions`/`interiorOptions` selections when merged
+into a real model — same documented limitation as wheel/exterior-color on real models above,
+not a gap specific to the interior merge. `src/components/CarInterior.tsx` (the box-primitive
+dashboard/seats) still exists and is still used by the fully-procedural `FuscaModel.tsx` path —
+it was only replaced for the real GLTF models above.
+
+**R3F + Vite Fast Refresh gotcha**: components rendered inside `<Canvas>` (i.e. anything in the
+`RealCarModel.tsx`/`FuscaModel.tsx` tree) don't reliably hot-reload via React Fast Refresh — Vite
+patches the module, but an already-mounted R3F component instance can keep running the *old*
+closure since React Three Fiber's custom reconciler isn't the one Fast Refresh integrates with.
+Symptom: edited code (including new `console.log`/`useEffect` calls) silently doesn't run even
+though the served module clearly contains it. Fix: force a true hard reload
+(`location.reload()`, or navigate to a cache-busted URL) rather than trusting HMR when debugging
+anything inside the Canvas tree.
 
 ## Real-world dimensions (source of truth — 1 Three.js unit = 1 meter) — [implemented]
 
@@ -139,12 +335,20 @@ Rules:
   rotate). The panel approximates the door's curved area with a flat-ish box; it won't perfectly
   seam-match the underlying curved `LOWER_BODY`/`CABIN` shells at all rotation angles — that's
   an accepted approximation for a primitive placeholder, not a bug to chase further.
+  `DOOR_WIDTH` (1.01m, `FuscaModel.tsx`) is a measured real-world figure (~25% of the car's
+  overall 4.07m length), originally taken from a real Beetle door model front-to-back incl. glass
+  and kept as a hardcoded constant.
 - No physics/collision — parts can open regardless of camera angle or each other; this is a
   visual toggle, not a simulation.
 - Toggle controls live in `ConfigPanel.tsx` under an "Openable Parts" section (see
   [config-panel.spec.md](config-panel.spec.md)).
 
 ## Interior — [implemented, with a documented approximation]
+
+This section describes `src/components/CarInterior.tsx`, the procedural box-primitive interior
+— still used by `FuscaModel.tsx` only. Real GLTF models reuse the real-geometry
+`RealInterior.tsx` instead (see "Interior merge for real models without one" above), which has
+no color/material reactivity and isn't described by this section.
 
 - **Dashboard**: a low dark panel spanning the cabin width at the front of the interior,
   roughly where the real dash sits (below the windshield, above the pedal area).
@@ -197,4 +401,4 @@ Rules:
 - Photoreal image textures / UV-mapped materials (needs a real mesh + texture pipeline — future GLTF work).
 - Independent left/right door control, or any part opening via physics/animation easing — instant open/closed toggle only.
 - Occlusion-correct interior cutaway geometry (see Interior section above).
-- Engine bay detail beyond the existing vent louvers — no visible engine block, even with the lid open.
+- Engine bay detail beyond the shared `EngineBlock` + `EngineBay` (no wiring/hoses/ancillaries modeled).

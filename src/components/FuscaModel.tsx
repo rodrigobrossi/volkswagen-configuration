@@ -8,6 +8,8 @@ import {
   wheelOptions,
 } from '../data/fusca'
 import { useConfigStore } from '../store/configStore'
+import { CarInterior } from './CarInterior'
+import { EngineBlock } from './EngineBlock'
 import { Wheel } from './Wheel'
 
 // Real-world dimensions (meters) — see .specs/3d-model.spec.md. 1 Three.js unit = 1 meter.
@@ -64,6 +66,12 @@ const VENT_Y = [0.42, 0.5, 0.58, 0.66]
 const VENT_Z_ABS = -HALF_L * 0.82
 const ENGINE_LID_OPEN_ANGLE = 1.1
 
+// Engine block sits in the bay under REAR_DECK, fixed to the chassis (not part of the lid's
+// hinge group, so it doesn't swing with it) — only mounted while the lid is open, since the
+// closed REAR_DECK shell isn't a true hollow enclosure and can't be relied on to occlude it.
+const ENGINE_POSITION = [0, 0.16, REAR_DECK.z] as const
+const ENGINE_SCALE = 0.55
+
 // Doors: a real panel mesh (not just a seam line) hinged at its front edge (vertical axis),
 // swinging outward when open. DOOR_X/DOOR_MID_Y/DOOR_Z match the previous crease-only version's
 // position so the panel sits where the seam used to be.
@@ -72,7 +80,10 @@ const DOOR_BOTTOM_Y = 0.14
 const DOOR_MID_Y = (DOOR_TOP_Y + DOOR_BOTTOM_Y) / 2
 const DOOR_X = halfWidthAt(LOWER_BODY, DOOR_MID_Y) * 0.95
 const DOOR_Z = -0.05
-const DOOR_WIDTH = 0.7
+// 1.01m — ~25% of the car's overall 4.07m length. Originally measured from a real Beetle door
+// model (front-to-back incl. glass); kept as a hardcoded real-world figure. Was a guessed 0.7
+// before being measured.
+const DOOR_WIDTH = 1.01
 const DOOR_HEIGHT = DOOR_TOP_Y - DOOR_BOTTOM_Y
 const DOOR_HINGE_Z = DOOR_Z + DOOR_WIDTH / 2
 const DOOR_OPEN_ANGLE = 1.3
@@ -246,50 +257,7 @@ const SEAT_Z = GLASS_Z - 0.05
 // sit in, so it would otherwise be fully buried inside solid paint regardless of glass/doors.
 // `depthTest={false}` + a high `renderOrder` makes these render on top unconditionally — a
 // documented approximation ("always visible" instead of true occlusion), not an accident.
-const INTERIOR_RENDER_ORDER = 2
-
-function SteeringWheel({ rimMaterial }: { rimMaterial: 'plastic' | 'wood' | 'sport' }) {
-  const rimColor = rimMaterial === 'wood' ? '#6b4326' : rimMaterial === 'sport' ? '#0d0d0d' : '#1a1a1a'
-  const tube = rimMaterial === 'sport' ? 0.014 : 0.02
-  return (
-    <group position={[STEERING_X, STEERING_Y, STEERING_Z]} rotation={[Math.PI / 2.6, 0, 0]}>
-      <mesh renderOrder={INTERIOR_RENDER_ORDER}>
-        <torusGeometry args={[0.15, tube, 10, 20]} />
-        <meshStandardMaterial color={rimColor} roughness={0.5} depthTest={false} />
-      </mesh>
-      <mesh rotation={[0, 0, Math.PI / 5]} renderOrder={INTERIOR_RENDER_ORDER}>
-        <boxGeometry args={[0.02, 0.02, 0.26]} />
-        <meshStandardMaterial color="#1a1a1a" roughness={0.5} depthTest={false} />
-      </mesh>
-      <mesh rotation={[0, 0, -Math.PI / 5]} renderOrder={INTERIOR_RENDER_ORDER}>
-        <boxGeometry args={[0.02, 0.02, 0.26]} />
-        <meshStandardMaterial color="#1a1a1a" roughness={0.5} depthTest={false} />
-      </mesh>
-      {/* Steering column */}
-      <mesh position={[0, 0, -0.18]} renderOrder={INTERIOR_RENDER_ORDER}>
-        <cylinderGeometry args={[0.025, 0.03, 0.3, 10]} />
-        <meshStandardMaterial color="#2a2a2a" roughness={0.6} depthTest={false} />
-      </mesh>
-    </group>
-  )
-}
-
-function Seat({ x, hex }: { x: number; hex: string }) {
-  return (
-    <group position={[x, SEAT_Y, SEAT_Z]}>
-      {/* Cushion */}
-      <mesh position={[0, 0, 0.12]} renderOrder={INTERIOR_RENDER_ORDER}>
-        <boxGeometry args={[0.42, 0.12, 0.4]} />
-        <meshStandardMaterial color={hex} roughness={0.8} depthTest={false} />
-      </mesh>
-      {/* Backrest */}
-      <mesh position={[0, 0.22, -0.1]} rotation={[-0.15, 0, 0]} renderOrder={INTERIOR_RENDER_ORDER}>
-        <boxGeometry args={[0.42, 0.44, 0.1]} />
-        <meshStandardMaterial color={hex} roughness={0.8} depthTest={false} />
-      </mesh>
-    </group>
-  )
-}
+const DASHBOARD_WIDTH = HALF_W * 1.5
 
 export function FuscaModel() {
   const chassisYearId = useConfigStore((s) => s.chassisYearId)
@@ -398,6 +366,10 @@ export function FuscaModel() {
           ))}
         </group>
 
+        {engineLidOpen && (
+          <EngineBlock position={[...ENGINE_POSITION]} scale={ENGINE_SCALE} />
+        )}
+
         {/* Cabin/roof: distinctly narrower + taller + rear-biased — this is what creates the
             visible shoulder/beltline against the wider lower body below it. */}
         <mesh position={[0, CABIN.y, CABIN.z]} scale={CABIN.scale} castShadow receiveShadow>
@@ -415,13 +387,15 @@ export function FuscaModel() {
         <Pillar z={GLASS_Z - GLASS_SCALE[2] * 0.62} />
 
         {/* Interior: dashboard, steering wheel, seats */}
-        <mesh position={[0, DASH_Y, DASH_Z]} renderOrder={INTERIOR_RENDER_ORDER}>
-          <boxGeometry args={[HALF_W * 1.5, 0.08, 0.22]} />
-          <meshStandardMaterial color="#1c1c1c" roughness={0.7} depthTest={false} />
-        </mesh>
-        <SteeringWheel rimMaterial={steeringWheel.rimMaterial} />
-        <Seat x={STEERING_X} hex={interior.hex} />
-        <Seat x={-STEERING_X} hex={interior.hex} />
+        <CarInterior
+          dashboardPosition={[0, DASH_Y, DASH_Z]}
+          dashboardWidth={DASHBOARD_WIDTH}
+          steeringPosition={[STEERING_X, STEERING_Y, STEERING_Z]}
+          seatLeftPosition={[STEERING_X, SEAT_Y, SEAT_Z]}
+          seatRightPosition={[-STEERING_X, SEAT_Y, SEAT_Z]}
+          rimMaterial={steeringWheel.rimMaterial}
+          seatHex={interior.hex}
+        />
 
         {/* Doors: real panels that swing open on doorsOpen */}
         <DoorDetails side={1} open={doorsOpen} color={exteriorColor.hex} materialProps={bodyMaterialProps} />

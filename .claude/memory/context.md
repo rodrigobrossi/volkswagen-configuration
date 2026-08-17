@@ -11,6 +11,68 @@ update those when structure changes, and add an entry here for *why*.
 
 ---
 
+## 2026-07-17 (very late) — 5th real model, real openable doors, engine block, interior merge
+
+- **5th real model**: `fusca-1980.glb` (VW 1303 "Super Beetle", Configcars/maxipub, CC-BY-4.0),
+  wired to the `meu-fusca` preset and the `square-71-85` chassis year — closes the gap flagged
+  in the previous entry (no real model matched the user's own reference-car era). Exterior-only
+  (confirmed via its node list: only body panels/trim/glass/lights, no seat/dash naming).
+- **Real doors/hood/engine-lid now actually open** on 3 of the 5 models
+  (`fusca-1968.glb`/`fusca-callook.glb`/`fusca-1980.glb`, whichever have segmented node names —
+  see `CarModelDef.openableParts`). Generalized `RealCarModel.tsx`'s single-object rendering
+  into a `riggPart()` mechanism: detach the named node(s), reparent under a hinge `THREE.Group`
+  at the node's own bounding-box edge, rotate that group on toggle.
+  - **Hard bug, worth remembering**: initial version called `node.parent.remove(node)` *before*
+    `hinge.attach(node)`. `Object3D.attach()` reads `object.parent.matrixWorld` to correctly
+    compose the reparented transform, and handles the actual detach itself (via `add()`) —
+    nulling `node.parent` first makes `attach()` silently skip that composition step and fall
+    back to the node's raw pre-parent-chain local matrix. This looked fine for shallow nodes but
+    catastrophically scrambled `fusca-1968.glb`'s hood/trunk (nested under `Root_37`/`Body_35`,
+    which carry an FBX-export Z-up→Y-up axis-conversion rotation that only cancels out once
+    properly composed through the full parent chain) — full-car rendering corruption, visible
+    even with all parts closed, since the bug is in the static rigging, not the toggle. Took a
+    long isolate-by-disabling-parts-one-at-a-time pass to pin down. Fix: don't manually detach —
+    just call `hinge.attach(node)` while the node still has its original parent.
+  - CalLook's real door (`Door_R.001` subtree) was measured and used to correct the procedural
+    model's `DOOR_WIDTH`: was a guessed `0.7`, measured real value is `1.01` (~25% of the car's
+    4.07m length) — the door was previously noticeably too narrow.
+- **Engine block**: `src/components/EngineBlock.tsx`, a new shared component wrapping
+  `public/models/engine/scene.gltf` (no `license.txt` bundled — included on the project owner's
+  explicit confirmation of the source, see CREDITS.md). Self-centers, takes
+  `position`/`scale`/`rotation` props. Rendered in the procedural engine bay (`FuscaModel.tsx`)
+  and in `fusca-1980.glb`'s real engine bay (`RealCarModel.tsx`, positioned via that model's own
+  `engineLid` hinge pivot) — both **only while the engine lid is open**, and both with
+  `depthTest={false}` + high `renderOrder`, since neither bay is a true hollow cavity.
+- **Interior merge**: extracted `FuscaModel.tsx`'s dashboard/steering-wheel/seats into a shared
+  `src/components/CarInterior.tsx` (position-parameterized), merged into `fusca-1980.glb` and
+  `fusca-1948.glb` (`CarModelDef.hasInterior: false` — neither has baked-in cabin geometry).
+  - **Placement is fraction-of-bounding-box, not absolute coordinates** —
+    `interiorAnchor.heightFraction`/`depthFraction` (0..1 across the model's own *runtime*
+    height/length), deliberately not fixed native-unit numbers. First attempt used absolute
+    coordinates computed *offline* from each `.glb`'s declared accessor min/max (via a
+    standalone Node script parsing the raw glTF JSON) — this placed the interior floating above
+    the roofline in-browser. The offline accessor-based bbox didn't match what
+    `THREE.Box3.setFromObject` computes from the actual loaded geometry closely enough to use
+    directly. Fraction-of-bounding-box sidesteps the mismatch entirely (self-corrects to
+    whatever the runtime box actually is) and was confirmed by screenshot on both models.
+  - Real models' "front" is `-Z` (per their `openableParts` `pivotZ:'min'` on the front trunk)
+    vs. the procedural model's `+Z` — `CarInterior`'s shared steering/seat relative-offset
+    constants are Z-mirrored when reused in `RealCarModel.tsx`.
+- **R3F + Vite Fast Refresh gotcha, worth remembering**: while debugging the above, added
+  `console.error`/`document.title` probes inside `RealCarModel`'s render body and a `useEffect`
+  — none of them ever fired, across many edits and full `location.reload()`s, even though
+  `curl`-fetching the served module confirmed the new code was there and a *module-level*
+  `console.error` (outside the component function) fired reliably on every reload. Root cause:
+  components rendered inside `<Canvas>` don't reliably hot-reload via React Fast Refresh, since
+  React Three Fiber's custom reconciler isn't the one Vite's Fast Refresh plugin integrates
+  with — an already-mounted instance can keep running the *old* closure indefinitely. If a debug
+  log inside a Canvas-tree component ever seems to silently not fire, don't assume the code
+  path isn't reached — hard-reload harder (cache-busted URL) or just switch to a
+  runtime-introspection-free approach (this session ended up using the fraction-of-bounding-box
+  redesign above instead of chasing the introspection further, which turned out cleaner anyway).
+- All 5 models' assets, `CREDITS.md`, `.specs/3d-model.spec.md`, and `docs/SDD.md` updated to
+  match — see those for the current-state reference, this entry is just the *why*.
+
 ## 2026-07-17 (night) — Real GLTF models integrated: 4 licensed Beetles, preset/era-keyed swap
 
 - User asked me to find a free Beetle GLTF and integrate it. Sketchfab has models but gates

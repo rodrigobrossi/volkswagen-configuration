@@ -64,9 +64,27 @@ export function ConfigPanel() {
 
       {activeRealModel && (
         <div className="real-model-hint">
-          Showing a real 3D model ({activeRealModel.label}, {activeRealModel.credit}). Wheels,
-          exterior color, interior, steering wheel, and openable parts below are saved but won't
-          visually apply until you switch to a preset without a matching real model.
+          Showing a real 3D model ({activeRealModel.label}, {activeRealModel.credit}).{' '}
+          {activeRealModel.wheelMounts?.length ? (
+            <>Wheel style swaps this model's real wheels.</>
+          ) : (
+            <>Wheel style won't visually apply on this model — its wheels aren't separable from the body.</>
+          )}{' '}
+          {activeRealModel.openableParts?.length ? (
+            <>Doors, front trunk, and engine lid below do open on this model.</>
+          ) : (
+            <>This model has no separable doors/trunk/hood, so the openable-parts toggles below won't visually apply.</>
+          )}{' '}
+          {activeRealModel.recolorable === false ? (
+            <>
+              Exterior color won't visually apply on this model — its body is entirely rust/patina
+              photo textures, and tinting them would just discolor the weathering.
+            </>
+          ) : (
+            <>Exterior color repaints this model's body.</>
+          )}{' '}
+          Interior and steering wheel selections below are saved but won't visually apply to a
+          real model.
         </div>
       )}
 
