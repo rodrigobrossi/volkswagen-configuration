@@ -37,6 +37,22 @@ export interface OpenablePartConfig {
    * bounding-box center sits at x≈0. When true, riggPart() splits that node's triangles by
    * world-space X sign into two independent nodes before hinging each normally. */
   splitLeftRight?: boolean
+  /** Doors only. These GLTFs are organised BY MATERIAL, not by part — so a door's handle, mirror and
+   * weatherstrip/friso live in SEPARATE per-side meshes that don't move when only the painted panel
+   * hinges (the user's "os frisos e maçanetas permanecem no mesmo lugar" bug). Each entry is a
+   * substring of such a node's name; riggPart() attaches every matching mesh to the NEAREST door
+   * hinge (by X), so the whole door composition swings together. Only list PER-SIDE door-only parts
+   * here — a mesh shared across both doors or fused with a neighbour (e.g. door glass baked together
+   * with the quarter window, or the belt-line trim that runs into the fenders) can't be whole-moved
+   * cleanly and is deliberately left out. */
+  captureNodes?: string[]
+  /** Doors only. Like captureNodes, but for a mesh whose door part is FUSED into a larger shared
+   * mesh (e.g. model-1980's `vitres` — the door window baked together with the fixed quarter
+   * window). riggPart() TRIANGLE-SPLITS each named mesh by the door panel's own X/Z footprint,
+   * attaching the door-window slice to that door's hinge and leaving the rest (quarter glass) in
+   * place. Kept separate from captureNodes because splitting is only safe on meshes known to be
+   * pure glass/trim where a cut edge is invisible — never on the painted body. */
+  captureSplitNodes?: string[]
 }
 
 export interface WheelMountConfig {
@@ -229,6 +245,13 @@ export const carModels: Record<CarModelKey, CarModelDef> = {
         pivotZ: 'max',
         pivotY: 'center',
         splitLeftRight: true,
+        // Peças por-lado da porta (malhas separadas por material) que giram junto com o painel:
+        // retro_ext (retrovisor), plaquette (maçaneta), joint_porte (friso/borracha da porta).
+        captureNodes: ['retro_ext', 'plaquette', 'joint_porte'],
+        // Malhas onde a parte da porta está FUNDIDA com o resto, cortadas por triângulos na pegada
+        // de cada porta: vitres = vidro da porta + custódia numa peça; jonc_lateral = friso corrido
+        // que atravessa as duas portas e os para-lamas. Cada porta leva sua fatia; o resto fica.
+        captureSplitNodes: ['vitres', 'jonc_lateral'],
       },
       { part: 'frontTrunk', nodeNames: ['CAPOT'], hingeAxis: 'x', openAngle: -1.1, pivotZ: 'min', pivotY: 'max' },
       { part: 'engineLid', nodeNames: ['CAPOT_MOTEUR'], hingeAxis: 'x', openAngle: 1.1, pivotZ: 'max', pivotY: 'max' },

@@ -7,6 +7,7 @@ import { realWheelModels, wheelOptionModel } from '../data/wheelModels'
 import { useConfigStore } from '../store/configStore'
 import { EngineBlock } from './EngineBlock'
 import { EngineBay } from './EngineBay'
+import { Chassis } from './Chassis'
 import { RealInterior } from './RealInterior'
 import { RealWheel } from './RealWheel'
 import { useBodyPaint } from './useBodyPaint'
@@ -303,6 +304,99 @@ function splitNodeByWorldX(sourceNode: THREE.Object3D): { left: THREE.Object3D; 
   return { left: leftClone, right: rightClone }
 }
 
+// A door in these GLTFs is only the painted panel; its handle, mirror and weatherstrip/friso live in
+// separate PER-SIDE by-material meshes (named in OpenablePartConfig.captureNodes) that otherwise stay
+// put when the panel hinges (the user's "os frisos e maçanetas permanecem no mesmo lugar" bug). This
+// attaches each such mesh to the NEAREST door hinge by X, so the whole door composition swings
+// together. Whole-mesh reparenting (never triangle-splitting) means a neighbour can never be torn —
+// only complete per-side parts are listed, so nothing shared (glass fused with the quarter window,
+// belt trim running into the fenders, the VW badge, a wheel) is ever moved.
+// Partitions a mesh's triangles by whether their world-space centroid falls inside `box`, returning
+// two FRESH BufferGeometries (either null when empty). Never mutates the shared cached geometry
+// (RealCarModel clones the graph but not geometries) — same safety reasoning as splitNodeByWorldX.
+// Used to split a door part that's fused into a larger glass/trim mesh (see captureSplitNodes).
+function partitionMeshByWorldBox(
+  mesh: THREE.Mesh,
+  box: THREE.Box3,
+): { inside: THREE.BufferGeometry | null; outside: THREE.BufferGeometry | null } {
+  const src = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry
+  const position = src.getAttribute('position') as THREE.BufferAttribute
+  if (!position) return { inside: null, outside: null }
+  const normal = src.getAttribute('normal') as THREE.BufferAttribute | undefined
+  const uv = src.getAttribute('uv') as THREE.BufferAttribute | undefined
+  mesh.updateWorldMatrix(true, false)
+  const a = new THREE.Vector3()
+  const b = new THREE.Vector3()
+  const c = new THREE.Vector3()
+  const cen = new THREE.Vector3()
+  const inside: number[] = []
+  const outside: number[] = []
+  for (let tri = 0; tri < position.count; tri += 3) {
+    a.fromBufferAttribute(position, tri).applyMatrix4(mesh.matrixWorld)
+    b.fromBufferAttribute(position, tri + 1).applyMatrix4(mesh.matrixWorld)
+    c.fromBufferAttribute(position, tri + 2).applyMatrix4(mesh.matrixWorld)
+    cen.copy(a).add(b).add(c).multiplyScalar(1 / 3)
+    ;(box.containsPoint(cen) ? inside : outside).push(tri, tri + 1, tri + 2)
+  }
+  const build = (indices: number[]) => {
+    const g = new THREE.BufferGeometry()
+    const p = new Float32Array(indices.length * 3)
+    const n2 = normal ? new Float32Array(indices.length * 3) : null
+    const u2 = uv ? new Float32Array(indices.length * 2) : null
+    indices.forEach((srcI, i) => {
+      p[i * 3] = position.getX(srcI)
+      p[i * 3 + 1] = position.getY(srcI)
+      p[i * 3 + 2] = position.getZ(srcI)
+      if (normal && n2) {
+        n2[i * 3] = normal.getX(srcI)
+        n2[i * 3 + 1] = normal.getY(srcI)
+        n2[i * 3 + 2] = normal.getZ(srcI)
+      }
+      if (uv && u2) {
+        u2[i * 2] = uv.getX(srcI)
+        u2[i * 2 + 1] = uv.getY(srcI)
+      }
+    })
+    g.setAttribute('position', new THREE.BufferAttribute(p, 3))
+    if (n2) g.setAttribute('normal', new THREE.BufferAttribute(n2, 3))
+    if (u2) g.setAttribute('uv', new THREE.BufferAttribute(u2, 2))
+    return g
+  }
+  return { inside: inside.length ? build(inside) : null, outside: outside.length ? build(outside) : null }
+}
+
+// Splits `mesh` (a glass/trim mesh with a door part fused into it) by the door panel's X/Z footprint
+// `region`: the door slice is reparented under `hinge` (as a fresh mesh keeping the same material),
+// the remainder stays put. Nothing shared is torn because the cut runs through pure glass/trim.
+function splitCaptureIntoHinge(mesh: THREE.Mesh, region: THREE.Box3, hinge: THREE.Group) {
+  if (!mesh.parent) return
+  const { inside, outside } = partitionMeshByWorldBox(mesh, region)
+  if (!inside) return
+  const captured = new THREE.Mesh(inside, mesh.material)
+  captured.position.copy(mesh.position)
+  captured.quaternion.copy(mesh.quaternion)
+  captured.scale.copy(mesh.scale)
+  mesh.parent.add(captured)
+  hinge.attach(captured)
+  mesh.geometry = outside ?? new THREE.BufferGeometry()
+}
+
+function attachToNearestHinge(mesh: THREE.Mesh, hinges: THREE.Group[], hingeX: number[]) {
+  const bb = new THREE.Box3().setFromObject(mesh)
+  if (bb.isEmpty()) return
+  const cx = (bb.min.x + bb.max.x) / 2
+  let best = 0
+  let bestDist = Infinity
+  hingeX.forEach((hx, i) => {
+    const d = Math.abs(cx - hx)
+    if (d < bestDist) {
+      bestDist = d
+      best = i
+    }
+  })
+  hinges[best]?.attach(mesh)
+}
+
 // Detaches the configured node(s) for one openable part from `object`, re-parents each under a
 // new hinge group positioned at the node's own bounding-box edge (per pivotZ/pivotY), and adds
 // the hinge group back into `object` — so it inherits the same centering/scale/rotation as
@@ -332,6 +426,22 @@ function riggPart(object: THREE.Object3D, config: OpenablePartConfig): OpenableR
     config.nodeNames.forEach((name) => {
       const node = findByName(object, name)
       if (node) nodes.push(node)
+    })
+  }
+
+  // captureNodes: the per-side door-detail meshes (handle, mirror, door seal) named for this model.
+  // Snapshot them BEFORE hinging (while still in place); after the hinges are built each is attached
+  // to the nearest one so it swings with its door. Matched by name substring.
+  const captureMeshes: THREE.Mesh[] = []
+  if (config.captureNodes?.length) {
+    object.traverse((o) => {
+      if (o instanceof THREE.Mesh && config.captureNodes!.some((n) => o.name.includes(n))) captureMeshes.push(o)
+    })
+  }
+  const splitMeshes: THREE.Mesh[] = []
+  if (config.captureSplitNodes?.length) {
+    object.traverse((o) => {
+      if (o instanceof THREE.Mesh && config.captureSplitNodes!.some((n) => o.name.includes(n))) splitMeshes.push(o)
     })
   }
 
@@ -381,6 +491,37 @@ function riggPart(object: THREE.Object3D, config: OpenablePartConfig): OpenableR
     signs.push(side)
   })
 
+  // Attach each per-side door detail (handle/mirror/seal) to the nearest door hinge, so it swings
+  // with its door — see captureNodes / attachToNearestHinge.
+  if ((captureMeshes.length || splitMeshes.length) && hinges.length) {
+    const hingeX = centers.map((c) => c.x)
+    captureMeshes.forEach((mesh) => attachToNearestHinge(mesh, hinges, hingeX))
+    // Fused door parts (door window baked with the quarter glass; the belt-line friso that runs the
+    // whole side through both doors and the fenders): triangle-split each named mesh by EVERY door
+    // panel's own X/Z footprint (Y grown so the window above the panel is included). Each door takes
+    // its own slice — a both-sides mesh like the friso is cut for the left AND right door — and the
+    // remainder (quarter glass, fender trim) stays put. Iterating all hinges (not just the nearest)
+    // is what lets one shared mesh feed both doors; splitCaptureIntoHinge reduces the mesh to the
+    // remaining geometry after each cut, so the passes compose.
+    splitMeshes.forEach((mesh) => {
+      hinges.forEach((hinge, i) => {
+        const c = centers[i]
+        const s = sizes[i]
+        // The door panel is thin in X (just the skin), but the parts we want sit PROUD of it — the
+        // window glass slightly out, the belt-line friso further out still. So the X half-extent is
+        // widened by a good fraction of the door's depth to reach them, while staying well shy of
+        // the car centre so the other door's side is never grabbed. Y/Z stay tied to the door
+        // footprint (Y grown up for the window above the panel).
+        const xHalf = s.x / 2 + s.z * 0.35
+        const region = new THREE.Box3(
+          new THREE.Vector3(c.x - xHalf, c.y - s.y, c.z - s.z / 2 - s.z * 0.1),
+          new THREE.Vector3(c.x + xHalf, c.y + s.y, c.z + s.z / 2 + s.z * 0.1),
+        )
+        splitCaptureIntoHinge(mesh, region, hinge)
+      })
+    })
+  }
+
   return hinges.length
     ? { part: config.part, axis: config.hingeAxis, angle: config.openAngle, hinges, signs, centers, sizes }
     : null
@@ -392,6 +533,7 @@ export function RealCarModel({ model }: { model: CarModelDef }) {
   const frontTrunkOpen = useConfigStore((s) => s.frontTrunkOpen)
   const engineLidOpen = useConfigStore((s) => s.engineLidOpen)
   const wheelId = useConfigStore((s) => s.wheelId)
+  const chassisView = useConfigStore((s) => s.chassisView)
 
   const { object, rigs, wheelHubs } = useMemo(() => {
     const target = model.nodeName ? findByName(scene, model.nodeName) : scene
@@ -514,10 +656,17 @@ export function RealCarModel({ model }: { model: CarModelDef }) {
   // measure equal). Hub POSITIONS stay per-wheel (measured centres); only the diameter is unified.
   const wheelDiameter = wheelHubs.length ? Math.min(...wheelHubs.map((h) => h.diameter)) : 0
 
+  // Chassi montável: substitui o corpo fixo pela plataforma (assoalhos, túnel, chapéu de napoleão,
+  // travessas) — ver Chassis.tsx. Só o model-1980 (que representa o 1973) tem chassi calibrado por
+  // enquanto; os demais ignoram o modo. As rodas reais continuam, virando um chassi rolante.
+  const chassisActive = chassisView !== 'off' && model.key === 'model-1980'
+
   return (
     <group rotation={[0, rotationY, 0]} scale={scale}>
-      <primitive object={object} position={centering} />
-      {engineLidRig &&
+      <primitive object={object} position={centering} visible={!chassisActive} />
+      {chassisActive && <Chassis scale={scale} exploded={chassisView === 'exploded'} />}
+      {!chassisActive &&
+        engineLidRig &&
         engineLidOpen &&
         (() => {
           // X is centred on the lid; Z is INSET forward from the car's rear boundary by a fixed
@@ -558,7 +707,7 @@ export function RealCarModel({ model }: { model: CarModelDef }) {
             </>
           )
         })()}
-      {model.hasInterior === false && (
+      {!chassisActive && model.hasInterior === false && (
         // The host body box in this group's local space: `object` is drawn at `centering`, which
         // puts its box X/Z-centered on 0 and grounded at Y=0. So min = (-size.x/2, 0, -size.z/2).
         // RealInterior maps 1968's own interior-to-body relationship onto this box — see there.

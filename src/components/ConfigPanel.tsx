@@ -198,6 +198,33 @@ export function ConfigPanel() {
         </div>
       </Section>
 
+      {activeRealModel?.key === 'model-1980' && (
+        <Section title="Chassi (1973)">
+          <div className="swatch-row">
+            {(
+              [
+                ['off', 'Carro'],
+                ['assembled', 'Chassi montado'],
+                ['exploded', 'Chassi explodido'],
+              ] as const
+            ).map(([view, label]) => (
+              <button
+                key={view}
+                type="button"
+                className={`swatch-btn${state.chassisView === view ? ' active' : ''}`}
+                onClick={() => state.setChassisView(view)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="hint">
+            Substitui a carroceria pela plataforma do Fusca (assoalhos, túnel central, chapéu de
+            napoleão e travessas). Só no modelo de 1971–1985 (representa o 1973).
+          </p>
+        </Section>
+      )}
+
       <Section title="Spec Sheet">
         <ul className="spec-list">
           <li>

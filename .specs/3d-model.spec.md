@@ -92,6 +92,24 @@ diagnose because it was visible even with all parts closed (the bug is in the st
 not the open/close rotation). If a real-model door/hood/lid ever renders scrambled again, check
 this first.
 
+**Door composition (`captureNodes`) — [implemented].** These GLTFs are organised BY MATERIAL, not
+by part, so a door's handle, mirror and weatherstrip/friso are SEPARATE per-side meshes that don't
+move when only the painted panel hinges (reported bug: "os frisos e maçanetas permanecem no mesmo
+lugar"). `OpenablePartConfig.captureNodes` lists name-substrings of those per-side meshes
+(`fusca-1980.glb`: `retro_ext`, `plaquette`, `joint_porte`); `riggPart()` attaches each matching
+mesh to the NEAREST door hinge by X so the whole composition swings together. Whole-mesh reparenting
+(never triangle-splitting) guarantees these can't be torn — only complete per-side parts are listed.
+
+Parts whose door portion is FUSED into a larger shared mesh are handled by `captureSplitNodes`
+(`fusca-1980.glb`: `vitres` = door window baked with the fixed quarter glass; `jonc_lateral` = the
+belt-line friso running the whole side through both doors and the fenders). `riggPart()`
+TRIANGLE-SPLITS each named mesh by EVERY door panel's X/Z footprint (X widened by a fraction of the
+door depth to reach trim that sits proud of the thin skin; Y grown up for the window above the panel),
+reparenting each door's slice to its hinge and leaving the remainder (quarter glass, fender trim) in
+place. Splitting is confined to these named glass/trim meshes so a cut edge is invisible and the
+painted body is never touched. A `captureSplitNodes` mesh spanning both doors is cut once per door,
+so one shared friso feeds both.
+
 ### Real wheel swap on real models — [implemented]
 
 `src/components/RealWheel.tsx` loads one of 3 real, licensed wheel `.glb` models (see
