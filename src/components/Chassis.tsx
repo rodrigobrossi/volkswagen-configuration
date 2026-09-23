@@ -36,10 +36,11 @@ export function Chassis({ scale, exploded }: { scale: number; exploded: boolean 
         ]
         if (part.kind === 'tube') {
           const [radius, length] = part.size
-          // Tubo deitado ao longo de X (viga/travessa transversal): o cilindro nasce no eixo Y, então
-          // gira 90° em Z para ficar horizontal, apontando esquerda-direita.
+          // O cilindro nasce no eixo Y. tubeAxis 'x' → gira 90° em Z (transversal, viga/travessa);
+          // 'z' → gira 90° em X (longitudinal, espinha do túnel).
+          const rot: [number, number, number] = part.tubeAxis === 'z' ? [Math.PI / 2, 0, 0] : [0, 0, Math.PI / 2]
           return (
-            <mesh key={part.id} position={pos} rotation={[0, 0, Math.PI / 2]}>
+            <mesh key={part.id} position={pos} rotation={rot}>
               <cylinderGeometry args={[s(radius), s(radius), s(length), 20]} />
               {material(part)}
             </mesh>
@@ -47,7 +48,7 @@ export function Chassis({ scale, exploded }: { scale: number; exploded: boolean 
         }
         const [w, h, d] = part.size
         return (
-          <mesh key={part.id} position={pos}>
+          <mesh key={part.id} position={pos} rotation={[0, THREE.MathUtils.degToRad(part.rotationYDeg ?? 0), 0]}>
             <boxGeometry args={[s(w), s(h), s(d)]} />
             {material(part)}
           </mesh>

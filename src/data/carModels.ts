@@ -5,7 +5,7 @@
  * real-world match exists. See pickRealModel() for the selection rule.
  */
 
-export type CarModelKey = 'model-1948' | 'model-1968' | 'model-ratlook' | 'model-1980'
+export type CarModelKey = 'model-1948' | 'model-1968' | 'model-1980' | 'model-1973'
 
 export type OpenablePartKind = 'doors' | 'frontTrunk' | 'engineLid'
 
@@ -53,6 +53,30 @@ export interface OpenablePartConfig {
    * place. Kept separate from captureNodes because splitting is only safe on meshes known to be
    * pure glass/trim where a cut edge is invisible — never on the painted body. */
   captureSplitNodes?: string[]
+  /** Doors/lids whose panel is FUSED into the body shell with NO separate node at all (this 1973's
+   * doors + engine-lid live inside SM_Base). There's nothing to detach by name, so the panel is
+   * TRIANGLE-CUT out of the shell by a region and the slice is hinged. Values are FRACTIONS (0..1) of
+   * the `splitSourceNodes` combined bounding box — NOT metres — because riggPart runs at build time
+   * when the model is still at native scale and uncentered; fractions are invariant to that. x/y/z:
+   * 0 = the box's min corner, 1 = its max. Written for the +X (right) side; set `mirrorX` to also cut
+   * the mirrored (1-x) region for a door pair. `splitSourceNodes` names the shell mesh(es) to cut
+   * from (substring match, e.g. ['SM_Base']). The cut edge on painted metal is visible up close, so
+   * the region is tuned by screenshot; last resort when a model can't be re-exported with separated
+   * door meshes. */
+  captureRegion?: { xMin: number; xMax: number; yMin: number; yMax: number; zMin: number; zMax: number }
+  splitSourceNodes?: string[]
+  mirrorX?: boolean
+  /** Optional SECOND cut pass, for meshes that need a TIGHTER region than the shell — e.g. the door's
+   * inner trim/door-card (SM_Interior), which shares its mesh with the internal sill (below it) and
+   * the B-pillar trim (behind it): cutting it by the shell's full region would drag those into the
+   * swinging door. `trimNodes` names the mesh(es); `trimRegion` is its own fractions of the SAME shell
+   * bbox. Both passes' slices join the one door hinge. */
+  trimNodes?: string[]
+  trimRegion?: { xMin: number; xMax: number; yMin: number; yMax: number; zMin: number; zMax: number }
+  /** Material-name substrings to EXCLUDE from the trim pass — meshes using them are skipped even if
+   * they fall in trimRegion. Used to drop the seats (whose wide bolster overlaps the door box) while
+   * still taking the door-card trim that shares the SM_Interior node group. */
+  trimExcludeMaterials?: string[]
 }
 
 export interface WheelMountConfig {
@@ -107,6 +131,11 @@ export interface CarModelDef {
    * auto-detect could never pick all of at once — confirmed on model-1968, whose "Paint_new" and
    * "Body" materials both reference the identical baked paint texture. */
   paintMaterialNames?: string[]
+  /** How the per-part editor groups this model's meshes into named "parts" (see carParts.ts). Some
+   * files have good NODE names (model-1980: phares, feux_ar, porte…) and generic materials; others
+   * the reverse (model-1968/1948: generic Object_NN nodes but good MATERIAL names — Body, Glass,
+   * Chrom / metal_schwarz, glas…). Defaults to 'node'. */
+  partGroupBy?: 'node' | 'material'
   /** False opts this model out of exterior-color recoloring entirely (see useBodyPaint.ts).
    * Defaults to true. Only model-ratlook sets this — its 8 generic `material0000..0007`
    * materials are all rust/patina photo textures with no distinct paint material to isolate,
@@ -122,6 +151,18 @@ export interface CarModelDef {
   /** True when this model's geometry faces -Z where model-1968 faces +Z, so the merged interior's
    * depth placement and facing must be mirrored. Determined per model by screenshot. */
   interiorFlipZ?: boolean
+  /** Caps the hollow cabin bottom with a body-coloured floor so an open door doesn't expose the dark
+   * void underneath (the "área preta na lataria"). Authored in METRES, world-centered (X 0 = car
+   * centreline, Z 0 = model centre), divided by the model's scale at render — see CabinFloor.tsx.
+   * `halfWidth`/`zMin`/`zMax` bound the panel; `y` is its (thin) height. Only needed on models with
+   * openable doors (a closed body hides the void). */
+  cabinFloor?: { y: number; halfWidth: number; zMin: number; zMax: number }
+  /** Multiplier (default 1) on the shared RealInterior's auto width-ratio scale. The interior is
+   * sized by the host's FULL body width (fender to fender), but a model whose cabin/greenhouse is
+   * proportionally narrower than the 1973 reference (e.g. model-1948, whose glass is only ±0.62 vs a
+   * ±0.674 interior) has the interior poke out through the side windows. A value < 1 tucks it back
+   * inside the cabin; tuned per model by screenshot. */
+  interiorScale?: number
   /** Per-model placement calibration, determined by screenshot-verifying each model in the
    * scene (see .specs/3d-model.spec.md). X/Z centering and ground contact (Y) are computed
    * automatically from the object's bounding box (see RealCarModel.tsx) — only orientation and
@@ -151,6 +192,11 @@ export const carModels: Record<CarModelKey, CarModelDef> = {
     // shared RealInterior (placement derived from 1968's own interior-to-body relationship, no
     // per-model anchor needed).
     hasInterior: false,
+    // Cabin is narrower than the 1973 reference (glass ±0.62 vs a ±0.674 interior), so the shared
+    // interior pokes through the side windows at full width-ratio scale — tuck it in ~15%.
+    interiorScale: 0.85,
+    // Nodes are generic; materials (metal_schwarz, glas, spiegel…) name the parts.
+    partGroupBy: 'material',
   },
   'model-1968': {
     key: 'model-1968',
@@ -164,6 +210,8 @@ export const carModels: Record<CarModelKey, CarModelDef> = {
     // not by reading the raw JSON.
     nodeName: '1968_Volkswagen_Beetle_(new)_38',
     calibration: { rotationY: 0, scale: 1 },
+    // Nodes are generic (Object_NN); materials (Body, Glass, Chrom, Wheel…) name the parts.
+    partGroupBy: 'material',
     // Node names verified by loading through useGLTF and searching the isolated "new" car
     // subtree (not the raw glTF JSON, and not the whole scene — the "old" car has its own
     // identically-patterned Door/Hood/Trunk nodes that must not get picked up here). Despite
@@ -203,21 +251,10 @@ export const carModels: Record<CarModelKey, CarModelDef> = {
     // embedded texture (verified offline: identical bufferView, average colour ~(112,88,38)/255),
     // so both must recolor together or the car would end up two-toned. See useBodyPaint.ts.
     paintMaterialNames: ['Paint_new', 'Body'],
-  },
-  'model-ratlook': {
-    key: 'model-ratlook',
-    path: '/models/fusca-ratlook.glb',
-    label: 'Old VW Bug (Rat Look)',
-    credit: 'jtressle — CC-BY-4.0',
-    calibration: { rotationY: 0, scale: 1 },
-    // Confirmed hollow by screenshot — a fully patina'd/rusted shell with no seat or dash
-    // geometry at all. Gets the shared RealInterior (placement derived from 1968's own
-    // interior-to-body relationship, no per-model anchor needed).
-    hasInterior: false,
-    // See CarModelDef.recolorable — this model's whole shell is 8 generic, rust/patina-textured
-    // materials (material0000..0007, confirmed by dumping its material list) with nothing
-    // identifiable as a distinct paint material; recoloring would just discolor the rust.
-    recolorable: false,
+    // Hollow shell: the baked "Interior" bottoms out at y≈0.40 with no floor pan below, so an open
+    // door shows the dark void. Cap it just under the seat base across the cabin footprint (measured
+    // at runtime: interior X ±0.6, Z −0.99..1.06). scale = 1, so metres == group-local here.
+    cabinFloor: { y: 0.38, halfWidth: 0.62, zMin: -1.02, zMax: 1.08 },
   },
   'model-1980': {
     key: 'model-1980',
@@ -274,33 +311,90 @@ export const carModels: Record<CarModelKey, CarModelDef> = {
       { nodeName: 'roue_1', splitLeftRight: true },
     ],
   },
+  // Modelo BASE do usuário (asset "FINAL_MODEL_68" — Beetle round-tail, usado como o 1973). Peças por
+  // seção: SM_Base (corpo, com portas fundidas), SM_Hood (capô dianteiro), SM_FrontKit/SM_RearKit,
+  // SM_Interior (cabine própria → hasInterior padrão), SM_Disk/SM_Hub + Mesh11/17 (rodas). Autorado
+  // em unidades minúsculas (comprimento ~0.041 no eixo Z) → escala ~100 para ~4,07 m. Agrupamento por
+  // material (nomes de nó são muito longos/repetidos; materiais são mais legíveis). Portas/tampa
+  // traseira estão fundidas no SM_Base → abrir via recorte por região (ver openableParts + captureRegion).
+  'model-1973': {
+    key: 'model-1973',
+    path: '/models/fusca-1973.glb',
+    label: 'VW Fusca 1973 (base)',
+    credit: 'Modelo do usuário — FINAL_MODEL_68',
+    calibration: { rotationY: 0, scale: 100.4 },
+    partGroupBy: 'material',
+    // SM_Hood is the FRONT luggage-lid, its own two meshes (paint + trim) sharing the "SM_Hood"
+    // token — resolveRigNode() groups them into one hinge. Beetle front lid hinges at the cabin/
+    // windshield edge (Z min) and lifts at the nose (Z max), same layout as the 1968's Trunk_30.
+    // Doors + rear engine-lid are FUSED into SM_Base (no separate node) — not openable without a
+    // region split of the body shell; deferred. Pivot/sign tuned by screenshot.
+    openableParts: [
+      { part: 'frontTrunk', nodeNames: ['SM_Hood'], hingeAxis: 'x', openAngle: -1.1, pivotZ: 'min', pivotY: 'max' },
+      // Doors fused into SM_Base — cut out by region (metal band only for now), mirrored L/R, hinged
+      // at the front vertical edge. Region tuned by screenshot. See captureRegion in carModels.ts.
+      {
+        part: 'doors',
+        nodeNames: [],
+        splitSourceNodes: ['SM_Base'],
+        // Inner door-card (the SM_Interior trim — dominant material Details_MAT_127 there) swings with
+        // the door, via a TIGHTER region so it doesn't drag the internal sill (below, y<~0.45) or the
+        // B-pillar trim (behind, z<~0.03). The SEATS (material Details_Add_01_004, whose wide bolster
+        // reaches into this box) are excluded by material so they stay put.
+        trimNodes: ['SM_Interior'],
+        trimExcludeMaterials: ['Details_Add_01_004'],
+        // The door-card and the SEAT share material (Details_MAT_127), but a density scan across X in
+        // the door slab found the physical GAP between them: seat at x 0.30–0.45, a valley at x
+        // 0.45–0.48, then the door-card peaking at x≈0.575. xMin 0.787 (world ≈0.47) cuts in that gap
+        // — taking the WHOLE door-card while leaving the seat behind (Add_01 cushion also excluded by
+        // material). yMin clears the internal sill; zMin the B-pillar trim.
+        trimRegion: { xMin: 0.787, xMax: 1.0, yMin: 0.14, yMax: 0.66, zMin: 0.207, zMax: 0.96 },
+        // Fractions of SM_Base bbox (right/+X side). Door COLUMN. yMin 0 = the paint mesh's OWN
+        // bottom edge (world y≈0.293, where the body colour ends and the separate chrome running-board
+        // begins) — cutting at that natural border means the door's lower edge is clean (no serration)
+        // and the door skin reaches all the way down to the estribo, per the user's red line. yMax
+        // 0.95 takes the door glass with it (like the 1968's real door node y 0.42→1.47). Z REAR edge
+        // is the vertical panel line just BEHIND the handle (vMAT_Details_EXT_092 at world z≈-0.13),
+        // so zMin 0.02 clears it and reaches the B-pillar; splitSourceNodes cuts all SM_Base meshes so
+        // the handle mesh comes into the door automatically. zMax is the A-pillar (front hinge) side.
+        captureRegion: { xMin: 0.82, xMax: 1.0, yMin: 0.0, yMax: 1.0, zMin: 0.02, zMax: 1.0 },
+        mirrorX: true,
+        hingeAxis: 'y',
+        openAngle: 1.0,
+        pivotZ: 'max',
+        pivotY: 'center',
+      },
+    ],
+  },
 }
 
 const PRESET_MODEL: Partial<Record<string, CarModelKey>> = {
-  'rat-look': 'model-ratlook',
   'resto-stock': 'model-1968',
-  'meu-fusca': 'model-1980',
+  // Modelo base do usuário (1973) — é o carro de referência agora.
+  'meu-fusca': 'model-1973',
 }
 
 const CHASSIS_YEAR_MODEL: Partial<Record<string, CarModelKey>> = {
   'oval-59-65': 'model-1948',
   'round-66-70': 'model-1968',
-  'square-71-85': 'model-1980',
+  // 1973 cai em 1971–1985 → usa o novo modelo base do usuário.
+  'square-71-85': 'model-1973',
 }
 
 /**
  * Selects which real GLTF model (if any) should render in place of the procedural FuscaModel.
- * Priority: an active style preset with a curated real-model match wins outright — even over a
- * chassis-year match — so e.g. baja-bug (round-66-70) does NOT fall back to the stock 1968
- * model, which would misrepresent a raised/off-road build as a clean stock car. Only when no
- * preset is active (freeform tweaking) does chassis year alone pick a real model. Returns null
- * when nothing matches, meaning: render the procedural FuscaModel.
+ * A style preset with a curated real-model match (resto-stock → 1968, meu-fusca → 1980) wins
+ * outright. Presets WITHOUT their own model — rat-look (now just the "patina" paint finish),
+ * baja-bug, rebaixado-br — fall through to the era model for the preset's chassis year, so the look
+ * is applied to a real body (e.g. rat-look = the era's model painted patina) rather than dropping to
+ * the procedural placeholder. Freeform (no preset) uses chassis year alone. Returns null only when
+ * even that has no model, meaning: render the procedural FuscaModel.
  */
 export function pickRealModel(activePresetId: string | null, chassisYearId: string): CarModelDef | null {
   if (activePresetId) {
     const key = PRESET_MODEL[activePresetId]
     if (key) return carModels[key]
-    return null
+    // preset sem modelo próprio → cai para o modelo da era (abaixo)
   }
   const key = CHASSIS_YEAR_MODEL[chassisYearId]
   return key ? carModels[key] : null

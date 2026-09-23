@@ -29,22 +29,18 @@ export const realWheelModels: Record<RealWheelModelKey, RealWheelModelConfig> = 
   retro: { path: '/models/wheels/wheel-retro.glb', axleRealignYaw: 0 },
 }
 
-// wheelOptions.id -> which real wheel model stands in for it on a real GLTF car. Chosen by
-// matching each option's rimStyle to the closest of the 3 real assets:
-// - 'hubcap' options (steel-stock, whitewall-classic, aco-hubcap) -> wheel-mustang64.glb, a
-//   classic chrome/steel wheel with a domed hubcap-like center, the closest of the 3 to a factory
-//   steel wheel silhouette.
-// - 'five-spoke' options (empi-5-spoke, baja-offroad) -> wheel-57cr.glb, a mesh/spoked alloy
-//   wheel — untextured flat-color materials (verified: no baseColorTexture on any of its 4
-//   materials, just baseColorFactor), so its plain grey disc material can still be recolored via
-//   rimColor (see RealWheel.tsx's tint prop) to tell baja's dark steel apart from EMPI's light alloy.
-// - 'multi-spoke' (brm-style) -> wheel-retro.glb, its thin multi-spoke design is the closest
-//   visual match to a BRM-style wheel among the 3.
+// wheelOptions.id -> which real wheel model stands in for it on a real GLTF car.
+//
+// TODAS as opções usam a BRM (wheel-retro.glb) por enquanto. Motivo: dos 3 assets, só a BRM tem um
+// PNEU completo e proporção correta — a mustang64 e a 57cr renderizavam "sem pneu" (só o aro/calota)
+// e em tamanhos diferentes, então as rodas ficavam inconsistentes de modelo para modelo. Padronizar
+// na BRM garante pneu + tamanho uniforme em todos os carros (pedido do usuário: "todas no tamanho da
+// BRM"). Para voltar a ter variedade de estilos, é preciso de assets de roda que também tenham pneu.
 export const wheelOptionModel: Record<string, RealWheelModelKey> = {
-  'steel-stock': 'mustang64',
-  'whitewall-classic': 'mustang64',
-  'aco-hubcap': 'mustang64',
-  'empi-5-spoke': 'gramlights-57cr',
-  'baja-offroad': 'gramlights-57cr',
+  'steel-stock': 'retro',
+  'whitewall-classic': 'retro',
+  'aco-hubcap': 'retro',
+  'empi-5-spoke': 'retro',
+  'baja-offroad': 'retro',
   'brm-style': 'retro',
 }

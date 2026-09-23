@@ -10,6 +10,8 @@ import {
 } from '../data/fusca'
 import { pickRealModel } from '../data/carModels'
 import { useConfigStore } from '../store/configStore'
+import { usePartsStore } from '../store/partsStore'
+import { PartsPanel } from './PartsPanel'
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -50,6 +52,8 @@ function SwatchRow<T extends { id: string; label: string }>({
 
 export function ConfigPanel() {
   const state = useConfigStore()
+  const editorOpen = usePartsStore((s) => s.editorOpen)
+  const setEditorOpen = usePartsStore((s) => s.setEditorOpen)
 
   const selectedEngine = engineOptions.find((e) => e.id === state.engineId)!
   const selectedChassis = chassisYears.find((c) => c.id === state.chassisYearId)!
@@ -75,16 +79,9 @@ export function ConfigPanel() {
           ) : (
             <>This model has no separable doors/trunk/hood, so the openable-parts toggles below won't visually apply.</>
           )}{' '}
-          {activeRealModel.recolorable === false ? (
-            <>
-              Exterior color won't visually apply on this model — its body is entirely rust/patina
-              photo textures, and tinting them would just discolor the weathering.
-            </>
-          ) : (
-            <>Exterior color repaints this model's body.</>
-          )}{' '}
-          Interior and steering wheel selections below are saved but won't visually apply to a
-          real model.
+          Exterior color repaints this model's body (use the “Patina / Rat Look” color for a
+          weathered finish). Interior and steering wheel selections below are saved but won't
+          visually apply to a real model.
         </div>
       )}
 
@@ -224,6 +221,19 @@ export function ConfigPanel() {
           </p>
         </Section>
       )}
+
+      {activeRealModel && (
+        <div className="panel-section">
+          <button
+            type="button"
+            className="swatch-btn add-part-btn"
+            onClick={() => setEditorOpen(!editorOpen)}
+          >
+            {editorOpen ? '▾ Editor de peças' : '▸ Editor de peças (avançado)'}
+          </button>
+        </div>
+      )}
+      {activeRealModel && editorOpen && <PartsPanel modelKey={activeRealModel.key} />}
 
       <Section title="Spec Sheet">
         <ul className="spec-list">

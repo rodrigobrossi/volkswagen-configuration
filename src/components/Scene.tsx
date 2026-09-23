@@ -32,7 +32,7 @@ export function Scene() {
   const autoRotate = useConfigStore((s) => s.autoRotate)
 
   return (
-    <Canvas shadows camera={{ position: [4.5, 2.2, 5], fov: 40 }}>
+    <Canvas shadows camera={{ position: [4.5, 2.2, 5], fov: 40 }} onCreated={(state) => { (window as unknown as { __r3f?: unknown; __scene?: THREE.Scene }).__r3f = state; (window as unknown as { __scene?: THREE.Scene }).__scene = state.scene }}>
       <color attach="background" args={['#1b1d22']} />
       <ProceduralEnvironment />
       <hemisphereLight args={['#8899aa', '#101112', 0.6]} />

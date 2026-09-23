@@ -1,84 +1,96 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
+import { exteriorColors } from '../data/fusca'
+import { useConfigStore } from '../store/configStore'
 
 // Shared interior for every real model that doesn't bake in its own cabin (see hasInterior in
-// carModels.ts). It extracts model-1968's REAL dashboard/seats + steering-wheel geometry (not a
-// procedural stand-in) and — rather than being hand-anchored per model — reproduces the exact
-// spatial relationship the interior has to 1968's OWN body, then maps that same relationship onto
-// each host model's bounding box. So it lands at the same fraction-of-length/width/height and the
-// same relative size it occupies in the reference car, automatically adapting to each model's own
-// dimensions with no per-model tuning. This is the "replicate 1968, adjusted to each model's
-// dimensions" requirement made literal.
-const SOURCE_PATH = '/models/fusca-1968.glb'
-// The file bundles two cars (see .specs/3d-model.spec.md Real GLTF Models section) — this is the
-// same isolated "new" car subtree model-1968 itself renders, found by loading through useGLTF
-// and searching the sanitized runtime name, not the raw glTF JSON.
-const SOURCE_CAR_NODE = '1968_Volkswagen_Beetle_(new)_38'
-// Dashboard+seats and steering-wheel meshes, found by dumping the isolated subtree's node/
-// material list directly (both use a material literally named "Interior") — not guessed.
-const DASHBOARD_NODE = 'Object_65'
-const STEERING_WHEEL_NODE = 'Object_39'
-
-function findByName(root: THREE.Object3D, name: string): THREE.Object3D | undefined {
-  let found: THREE.Object3D | undefined
-  root.traverse((obj) => {
-    if (!found && obj.name === name) found = obj
-  })
-  return found
-}
+// carModels.ts). It extracts the 1973 base model's REAL interior (dashboard/seats/steering wheel —
+// the "SM_Interior" section, which the user picked as the reference cabin) and — rather than being
+// hand-anchored per model — reproduces the exact spatial relationship the interior has to the 1973's
+// OWN body, then maps that same relationship onto each host model's bounding box. So it lands at the
+// same fraction-of-length/width/height and the same relative size it occupies in the reference car,
+// adapting to each model's dimensions with no per-model tuning.
+const SOURCE_PATH = '/models/fusca-1973.glb'
+// The interior meshes in fusca-1973.glb all carry "SM_Interior" in their (loader-sanitized) node
+// name — dashboard, seats and steering wheel — so match by substring rather than a single node id.
+const INTERIOR_MATCH = 'SM_Interior'
+// One of the interior meshes (the painted metal panels — dash face, door frames, the parts that on a
+// real Beetle ARE the exterior body colour) shares the 1973's DOMINANT BODY-PAINT material
+// ("vMAT_Volkswagen_Beetle_1968_Base1", baked dark red [0.286,0,0] with NO map). On the 1973 itself
+// useBodyPaint recolours it along with the shell (correct — it follows the car). But an OVERLAY on a
+// different host (1948/1980) carries the untouched original material and would render that panel a
+// fixed dark red that clashes with the host's chosen colour — exactly the interior-colour bleed to
+// avoid. So we clone that material privately (never the shared cache — that would corrupt Meu Fusca's
+// 1973 body) and retint it to the host's exterior colour here. The soft-trim materials (seat vinyl,
+// dash pad — all textured, default-white factor) are left alone so their baked colours read cleanly.
+const BODY_PAINT_MATCH = 'vMAT_Volkswagen_Beetle_1968_Base1'
 
 export function RealInterior({
   hostBoxMin,
   hostBoxSize,
   flipZ = false,
+  scaleMul = 1,
 }: {
-  /** The host body's bounding box, expressed in the host model's own group-local space (the same
-   * space `object` renders in inside RealCarModel — i.e. native units, X/Z centered on 0, Y
-   * grounded at 0). RealCarModel derives both from the host's own runtime bounding box. */
+  /** The host body's bounding box, in the host model's own group-local space (native units, X/Z
+   * centered on 0, Y grounded at 0). RealCarModel derives both from the host's runtime bbox. */
   hostBoxMin: [number, number, number]
   hostBoxSize: [number, number, number]
-  /** True when the host model's geometry faces -Z where 1968 faces +Z, so the interior's depth
-   * placement (and facing) must be mirrored. Determined per model by screenshot. */
+  /** True when the host model's geometry faces -Z where the 1973 source faces +Z, so the interior's
+   * depth placement (and facing) must be mirrored. Determined per host by screenshot. */
   flipZ?: boolean
+  /** Extra multiplier on the auto width-ratio scale (model.interiorScale) — < 1 tucks the interior
+   * inside a cabin narrower than the reference car's. Applied around the interior's own centre, so
+   * it stays put in the cabin. Defaults to 1. */
+  scaleMul?: number
 }) {
   const { scene } = useGLTF(SOURCE_PATH)
+  const exteriorColorId = useConfigStore((s) => s.exteriorColorId)
 
-  const { object, centering, frac, srcSize } = useMemo(() => {
-    const carRoot = findByName(scene, SOURCE_CAR_NODE)
-    // Clone just the isolated car subtree (not the whole two-car scene) and zero its own local
-    // transform before reading it — same fix as RealCarModel.tsx's own use of this subtree: left
-    // in place, it's a translation offset from sitting next to the "old" car in the source file,
-    // which throws off both the body bounding box and attach()'s composition below.
-    const clone = carRoot?.clone(true) ?? new THREE.Group()
+  const { object, centering, frac, srcSize, bodyTintMats } = useMemo(() => {
+    // Clone the whole 1973 car (the file is a single car, unlike 1968's two-car scene) and zero its
+    // own local transform before measuring/extracting.
+    const clone = scene.clone(true)
     clone.position.set(0, 0, 0)
     clone.quaternion.identity()
     clone.scale.set(1, 1, 1)
     clone.updateMatrixWorld(true)
 
-    // The reference car's whole body box, measured BEFORE extracting the interior — this is the
-    // denominator for the fractional placement.
+    // Whole-body box measured BEFORE extracting the interior — the denominator for the fractional
+    // placement.
     const bodyBox = new THREE.Box3().setFromObject(clone)
     const bodyMin = bodyBox.min.clone()
     const bodySize = new THREE.Vector3()
     bodyBox.getSize(bodySize)
 
-    const dash = findByName(clone, DASHBOARD_NODE)
-    const wheel = findByName(clone, STEERING_WHEEL_NODE)
+    // Collect every interior mesh, then attach into a container (attach() preserves each mesh's real
+    // pose relative to the body it was modeled in — see riggPart() for why this matters).
+    const interiorMeshes: THREE.Object3D[] = []
+    clone.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh && o.name.includes(INTERIOR_MATCH)) interiorMeshes.push(o)
+    })
     const container = new THREE.Group()
     clone.add(container)
-    // attach() (not a bare re-parent) preserves each node's real position/orientation relative
-    // to the car body it was modeled in, composing through `clone`'s now-valid matrixWorld chain
-    // — see riggPart() in RealCarModel.tsx for the fuller explanation of why this matters.
-    if (dash) container.attach(dash)
-    if (wheel) container.attach(wheel)
+    container.updateMatrixWorld(true)
+    interiorMeshes.forEach((m) => container.attach(m))
     container.updateMatrixWorld(true)
 
-    const box = new THREE.Box3().setFromObject(container)
-    const center = new THREE.Vector3()
-    box.getCenter(center)
+    // Privately clone the body-paint material on any interior metal panel and collect the clones so
+    // the effect below can retint them to the host colour without touching the shared 1973 cache.
+    const tintMats: THREE.MeshStandardMaterial[] = []
+    container.traverse((o) => {
+      const mesh = o as THREE.Mesh
+      if (!mesh.isMesh || Array.isArray(mesh.material) || !mesh.material) return
+      if (mesh.material.name !== BODY_PAINT_MATCH) return
+      const cloned = (mesh.material as THREE.MeshStandardMaterial).clone()
+      cloned.map = null
+      mesh.material = cloned
+      tintMats.push(cloned)
+    })
 
-    // Where the interior's center sits as a fraction (0..1) of the reference body box, per axis.
+    const box = new THREE.Box3().setFromObject(container)
+    const center = box.getCenter(new THREE.Vector3())
+
     const fracVec: [number, number, number] = [
       bodySize.x > 0 ? (center.x - bodyMin.x) / bodySize.x : 0.5,
       bodySize.y > 0 ? (center.y - bodyMin.y) / bodySize.y : 0.5,
@@ -87,20 +99,30 @@ export function RealInterior({
 
     return {
       object: container,
-      // Center the container on its own center so the group's position places that center.
       centering: [-center.x, -center.y, -center.z] as [number, number, number],
       frac: fracVec,
       srcSize: [bodySize.x, bodySize.y, bodySize.z] as [number, number, number],
+      bodyTintMats: tintMats,
     }
   }, [scene])
 
-  // Uniform scale so the interior keeps the same proportion of the host body it had of the
-  // reference body — using the width (X) ratio, the least distortion-prone axis to key off since
-  // all these cars share a near-identical track width.
-  const k = srcSize[0] > 0 ? hostBoxSize[0] / srcSize[0] : 1
+  // Keep the interior's painted metal in step with the host car's exterior colour (semi-matte, since
+  // interior sheet metal isn't as glossy as the outer shell). See BODY_PAINT_MATCH above.
+  useEffect(() => {
+    if (bodyTintMats.length === 0) return
+    const exteriorColor = exteriorColors.find((c) => c.id === exteriorColorId) ?? exteriorColors[0]
+    bodyTintMats.forEach((mat) => {
+      mat.color.set(exteriorColor.hex)
+      mat.roughness = 0.6
+      mat.metalness = 0.1
+      mat.needsUpdate = true
+    })
+  }, [bodyTintMats, exteriorColorId])
 
-  // Map each fractional position into the host's own box. Z is mirrored for models whose geometry
-  // faces the opposite way from 1968.
+  // Uniform scale so the interior keeps the same proportion of the host body it had of the reference
+  // body — keyed off width (X), the least distortion-prone axis (all these cars share ~the same track).
+  const k = (srcSize[0] > 0 ? hostBoxSize[0] / srcSize[0] : 1) * scaleMul
+
   const zFrac = flipZ ? 1 - frac[2] : frac[2]
   const position: [number, number, number] = [
     hostBoxMin[0] + frac[0] * hostBoxSize[0],

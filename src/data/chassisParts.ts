@@ -21,9 +21,14 @@ export interface ChassisPart {
   /** Rótulo PT exibido na vista explodida / UI. */
   label: string
   kind: ChassisPartKind
-  /** box: [largura X, altura Y, comprimento Z] em metros. tube: [raio, comprimento, _] — o tubo
-   * fica deitado ao longo de X (viga/travessa transversal). */
+  /** box: [largura X, altura Y, comprimento Z] em metros. tube: [raio, comprimento, _] — deitado ao
+   * longo de `tubeAxis` (padrão X). */
   size: [number, number, number]
+  /** Eixo do tubo (só para kind 'tube'): 'x' transversal (viga/travessa), 'z' longitudinal (espinha
+   * do túnel). Padrão 'x'. */
+  tubeAxis?: 'x' | 'z'
+  /** Rotação em torno de Y (graus) — para peças anguladas como os braços da forquilha dianteira. */
+  rotationYDeg?: number
   /** Posição MONTADA (metros reais, referencial do carro acima). */
   position: [number, number, number]
   /** Deslocamento aplicado * fator na vista explodida, para as peças se afastarem de forma legível
@@ -100,5 +105,34 @@ export const chassisParts: ChassisPart[] = [
     size: [1.34, 0.14, 0.16],
     position: [0, 0.26, -1.24],
     explode: [0, 0.1, -0.9],
+  },
+  // Espinha arredondada sobre o túnel central (dá o perfil de "coluna" do Fusca).
+  {
+    id: 'tunnel-ridge',
+    label: 'Espinha do túnel',
+    kind: 'tube',
+    size: [0.11, 2.8, 0],
+    tubeAxis: 'z',
+    position: [0, 0.39, -0.05],
+    explode: [0, 0.75, 0],
+  },
+  // Forquilha do chapéu de napoleão: dois braços angulados do túnel dianteiro até as pontas da viga.
+  {
+    id: 'napoleon-fork-left',
+    label: 'Braço esq. (chapéu)',
+    kind: 'box',
+    size: [0.62, 0.1, 0.12],
+    position: [-0.33, 0.26, 1.28],
+    rotationYDeg: 28,
+    explode: [-0.2, 0.15, 0.7],
+  },
+  {
+    id: 'napoleon-fork-right',
+    label: 'Braço dir. (chapéu)',
+    kind: 'box',
+    size: [0.62, 0.1, 0.12],
+    position: [0.33, 0.26, 1.28],
+    rotationYDeg: -28,
+    explode: [0.2, 0.15, 0.7],
   },
 ]

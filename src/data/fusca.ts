@@ -288,20 +288,8 @@ export const stylePresets: StylePreset[] = [
       engineId: '1300-stock',
     },
   },
-  {
-    id: 'rebaixado-br',
-    label: 'Rebaixado (Brazilian Street)',
-    description: 'Lowered street style with custom wheels and a modern interior touch.',
-    config: {
-      chassisYearId: 'itamar-86-96',
-      wheelId: 'brm-style',
-      steeringWheelId: 'sport-banana',
-      suspensionId: 'slammed',
-      exteriorColorId: 'azul-aster',
-      interiorId: 'red-bucket',
-      engineId: '1500-stock',
-    },
-  },
+  // "Rebaixado" não é um preset/modelo — é uma altura de suspensão (Suspension Height → "Rebaixado
+  // (Slammed)"; futuramente a "catraca mexicana"). Removido daqui.
   {
     id: 'meu-fusca',
     label: 'Meu Fusca (Reference)',
