@@ -30,3 +30,16 @@ If you are developing a production application, we recommend enabling type-aware
 ```
 
 See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+
+## Branching & releases
+
+This repository follows GitFlow, with **`master` as the default, production branch** and
+`develop` as the integration branch. Work happens on `feature/*`, ships through
+`release/*`, and emergencies go through `hotfix/*`.
+
+Read [docs/GITFLOW.md](docs/GITFLOW.md) before your first pull request.
+
+```bash
+git checkout develop && git pull origin develop
+git checkout -b feature/my-thing   # then PR into develop
+```
