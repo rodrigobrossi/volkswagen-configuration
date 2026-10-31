@@ -1,5 +1,5 @@
-import { ConfigPanel } from './components/ConfigPanel'
-import { Scene } from './components/Scene'
+import { ConfigPanel } from './ui/ConfigPanel'
+import { Scene } from './render/Scene'
 import { useConfigStore } from './store/configStore'
 import './App.css'
 

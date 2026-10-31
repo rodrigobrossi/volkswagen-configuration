@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "doc": "brain/ontology/README.md — canonical, vehicle-agnostic part taxonomy. Slot ids are <system>.<assembly>[.<position>]. Every model profile binds its asset's geometry to these slots; nothing downstream may depend on a file's own node/material names.",
+  "systems": [
+    { "id": "body", "label": "Carroceria" },
+    { "id": "closure", "label": "Aberturas" },
+    { "id": "glazing", "label": "Vidros" },
+    { "id": "lighting", "label": "Iluminação" },
+    { "id": "trim", "label": "Acabamentos" },
+    { "id": "wheel", "label": "Rodas" },
+    { "id": "chassis", "label": "Chassi / plataforma" },
+    { "id": "powertrain", "label": "Trem de força" },
+    { "id": "interior", "label": "Interior" }
+  ],
+  "openGroups": [
+    { "id": "doors", "slots": ["closure.door.left", "closure.door.right"] },
+    { "id": "frontLid", "slots": ["closure.lid.front"] },
+    { "id": "rearLid", "slots": ["closure.lid.rear"] }
+  ],
+  "slots": [
+    { "id": "body.shell", "system": "body", "label": "Carroceria", "capabilities": ["paint", "hide"] },
+    { "id": "closure.door.left", "system": "closure", "label": "Porta esquerda", "capabilities": ["articulate", "paint"], "side": "left", "openGroup": "doors" },
+    { "id": "closure.door.right", "system": "closure", "label": "Porta direita", "capabilities": ["articulate", "paint"], "side": "right", "openGroup": "doors" },
+    { "id": "closure.lid.front", "system": "closure", "label": "Tampa dianteira", "capabilities": ["articulate", "paint"], "end": "front", "openGroup": "frontLid" },
+    { "id": "closure.lid.rear", "system": "closure", "label": "Tampa traseira", "capabilities": ["articulate", "paint"], "end": "rear", "openGroup": "rearLid" },
+    { "id": "glazing.windshield", "system": "glazing", "label": "Para-brisa", "capabilities": ["hide"] },
+    { "id": "glazing.side", "system": "glazing", "label": "Vidros laterais", "capabilities": ["hide"] },
+    { "id": "glazing.rear", "system": "glazing", "label": "Vidro traseiro", "capabilities": ["hide"] },
+    { "id": "lighting.head", "system": "lighting", "label": "Faróis", "capabilities": ["hide", "recolor"] },
+    { "id": "lighting.tail", "system": "lighting", "label": "Lanternas", "capabilities": ["hide", "recolor"] },
+    { "id": "trim.bumper", "system": "trim", "label": "Para-choques", "capabilities": ["hide", "recolor"] },
+    { "id": "trim.handle", "system": "trim", "label": "Maçanetas", "capabilities": ["hide", "recolor"], "follows": "closure.door" },
+    { "id": "trim.mirror", "system": "trim", "label": "Retrovisores", "capabilities": ["hide", "recolor"], "follows": "closure.door" },
+    { "id": "trim.seal", "system": "trim", "label": "Borrachas / frisos", "capabilities": ["hide", "recolor"] },
+    { "id": "trim.running-board", "system": "trim", "label": "Estribos", "capabilities": ["hide", "recolor"] },
+    { "id": "wheel.front.left", "system": "wheel", "label": "Roda dianteira esquerda", "capabilities": ["swap"], "side": "left", "axle": "front" },
+    { "id": "wheel.front.right", "system": "wheel", "label": "Roda dianteira direita", "capabilities": ["swap"], "side": "right", "axle": "front" },
+    { "id": "wheel.rear.left", "system": "wheel", "label": "Roda traseira esquerda", "capabilities": ["swap"], "side": "left", "axle": "rear" },
+    { "id": "wheel.rear.right", "system": "wheel", "label": "Roda traseira direita", "capabilities": ["swap"], "side": "right", "axle": "rear" },
+    { "id": "interior.cabin", "system": "interior", "label": "Cabine", "capabilities": ["provision"] },
+    { "id": "interior.dashboard", "system": "interior", "label": "Painel", "capabilities": ["hide"] },
+    { "id": "interior.seat", "system": "interior", "label": "Bancos", "capabilities": ["hide", "recolor"] },
+    { "id": "interior.doorcard.left", "system": "interior", "label": "Forro porta esquerda", "capabilities": ["hide"], "side": "left", "follows": "closure.door.left" },
+    { "id": "interior.doorcard.right", "system": "interior", "label": "Forro porta direita", "capabilities": ["hide"], "side": "right", "follows": "closure.door.right" },
+    { "id": "interior.floor", "system": "interior", "label": "Assoalho da cabine", "capabilities": ["provision"] },
+    { "id": "chassis.platform", "system": "chassis", "label": "Plataforma", "capabilities": ["provision", "explode"] },
+    { "id": "powertrain.engine", "system": "powertrain", "label": "Motor", "capabilities": ["provision"] },
+    { "id": "powertrain.bay", "system": "powertrain", "label": "Cofre do motor", "capabilities": ["provision"] }
+  ]
+}

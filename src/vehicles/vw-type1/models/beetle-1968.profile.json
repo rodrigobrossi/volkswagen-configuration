@@ -1,0 +1,41 @@
+{
+  "schema": "vehicle-profile/v1",
+  "id": "model-1968",
+  "family": "vw-type1",
+  "label": "1968 Volkswagen Beetle",
+  "asset": {
+    "path": "/models/fusca-1968.glb",
+    "rootNode": "1968_Volkswagen_Beetle_(new)_38",
+    "credit": "KrStolorz — Sketchfab Standard"
+  },
+  "frame": { "rotationY": 0, "scale": 1 },
+  "parts": { "groupBy": "material" },
+  "paint": { "materials": ["Paint_new", "Body"] },
+  "openables": [
+    {
+      "group": "doors",
+      "extract": { "kind": "node", "match": ["DoorL_3", "DoorR_7"] },
+      "articulation": { "axis": "y", "openAngle": 1.3, "pivotY": "center", "pivotZ": "max" },
+      "note": "One node per door; front-edge hinge."
+    },
+    {
+      "group": "rearLid",
+      "extract": { "kind": "node", "match": ["Hood_17"] },
+      "articulation": { "axis": "x", "openAngle": 1.1, "pivotY": "max", "pivotZ": "max" },
+      "note": "Named 'Hood' but it is the REAR engine lid (sits at -Z). Hinge at the cabin-side top edge."
+    },
+    {
+      "group": "frontLid",
+      "extract": { "kind": "node", "match": ["Trunk_30"] },
+      "articulation": { "axis": "x", "openAngle": -1.1, "pivotY": "max", "pivotZ": "min" },
+      "note": "Named 'Trunk' — the FRONT luggage lid (+Z). Hinge at the cabin-side top edge."
+    }
+  ],
+  "wheels": {
+    "mounts": [{ "node": "Wheel_FL_20" }, { "node": "Wheel_FR_24" }, { "node": "Wheel_BL_8" }, { "node": "Wheel_BR_11" }]
+  },
+  "interior": { "source": "own" },
+  "cabinFloor": { "y": 0.38, "halfWidth": 0.62, "zMin": -1.02, "zMax": 1.08 },
+  "engineBay": { "hideNodes": ["Object_59"] },
+  "provenance": { "status": "verified", "notes": "brain/vehicles/vw-type1/models/beetle-1968.md" }
+}

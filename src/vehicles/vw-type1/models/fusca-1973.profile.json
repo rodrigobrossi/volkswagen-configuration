@@ -1,0 +1,35 @@
+{
+  "schema": "vehicle-profile/v1",
+  "id": "model-1973",
+  "family": "vw-type1",
+  "label": "VW Fusca 1973 (base)",
+  "asset": { "path": "/models/fusca-1973.glb", "credit": "Modelo do usuário — FINAL_MODEL_68" },
+  "frame": { "rotationY": 0, "scale": 100.4 },
+  "parts": { "groupBy": "material" },
+  "openables": [
+    {
+      "group": "frontLid",
+      "extract": { "kind": "node", "match": ["SM_Hood"] },
+      "articulation": { "axis": "x", "openAngle": -1.1, "pivotY": "max", "pivotZ": "min" },
+      "note": "SM_Hood = two meshes (paint + trim) grouped into one hinge."
+    },
+    {
+      "group": "doors",
+      "extract": {
+        "kind": "region-clip",
+        "source": ["SM_Base"],
+        "region": { "xMin": 0.82, "xMax": 1.0, "yMin": 0.0, "yMax": 1.0, "zMin": 0.02, "zMax": 1.0 },
+        "mirrorX": true,
+        "trim": {
+          "match": ["SM_Interior"],
+          "excludeMaterials": ["Details_Add_01_004"],
+          "region": { "xMin": 0.787, "xMax": 1.0, "yMin": 0.14, "yMax": 0.66, "zMin": 0.207, "zMax": 0.96 }
+        }
+      },
+      "articulation": { "axis": "y", "openAngle": 1.0, "pivotY": "center", "pivotZ": "max" },
+      "note": "Doors are fused into SM_Base: clipped out by panel lines (running board → roof, B-pillar behind the handle → A-pillar). Door card taken from SM_Interior at the seat/door-card density gap (x≈0.47 m); seat cushions excluded by material."
+    }
+  ],
+  "interior": { "source": "own" },
+  "provenance": { "status": "verified", "notes": "brain/vehicles/vw-type1/models/fusca-1973.md" }
+}
