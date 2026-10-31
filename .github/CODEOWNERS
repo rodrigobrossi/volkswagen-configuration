@@ -1,0 +1,7 @@
+# Default owner for everything in this repository.
+*                   @rodrigobrossi
+
+# Release-critical paths.
+/docs/GITFLOW.md    @rodrigobrossi
+/docs/SDD.md        @rodrigobrossi
+/package.json       @rodrigobrossi

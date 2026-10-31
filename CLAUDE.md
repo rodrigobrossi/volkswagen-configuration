@@ -45,6 +45,12 @@ plate) — local reference only, never committed.
   engine are currently reflected only in the spec-sheet text (not modeled in 3D
   yet — there's no interior/cutaway view or engine bay in the placeholder model).
 
+## Branching
+
+GitFlow, with `master` as the default/production branch and `develop` as integration.
+Never commit to `master` directly; work on `feature/*` off `develop`, ship via `release/*`,
+patch production via `hotfix/*`. Full rules: [docs/GITFLOW.md](docs/GITFLOW.md).
+
 ## Known gaps / next steps
 
 See [docs/SDD.md](docs/SDD.md) §6 for the full list (body mesh still primitive-geometry,
