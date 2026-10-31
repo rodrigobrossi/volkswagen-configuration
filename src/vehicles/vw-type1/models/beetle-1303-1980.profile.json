@@ -1,0 +1,35 @@
+{
+  "schema": "vehicle-profile/v1",
+  "id": "model-1980",
+  "family": "vw-type1",
+  "label": "VW 1303 (1980)",
+  "asset": { "path": "/models/fusca-1980.glb", "credit": "Configcars / maxipub — CC-BY-4.0" },
+  "frame": { "rotationY": 0, "scale": 0.52 },
+  "parts": { "groupBy": "node" },
+  "openables": [
+    {
+      "group": "doors",
+      "extract": { "kind": "node-split-x", "match": "porte_1" },
+      "articulation": { "axis": "y", "openAngle": 1.3, "pivotY": "center", "pivotZ": "max" },
+      "companions": {
+        "attachNearest": ["retro_ext", "plaquette", "joint_porte"],
+        "splitByFootprint": ["vitres", "jonc_lateral"]
+      },
+      "note": "porte_1 merges BOTH doors in one mesh. Mirror/handle/seal are per-side meshes; door glass is fused with the quarter glass and the belt trim runs through both doors — split by footprint."
+    },
+    {
+      "group": "frontLid",
+      "extract": { "kind": "node", "match": ["CAPOT"] },
+      "articulation": { "axis": "x", "openAngle": -1.1, "pivotY": "max", "pivotZ": "min" }
+    },
+    {
+      "group": "rearLid",
+      "extract": { "kind": "node", "match": ["CAPOT_MOTEUR"] },
+      "articulation": { "axis": "x", "openAngle": 1.1, "pivotY": "max", "pivotZ": "max" }
+    }
+  ],
+  "wheels": { "mounts": [{ "node": "roue", "splitX": true }, { "node": "roue_1", "splitX": true }] },
+  "interior": { "source": "donor" },
+  "platform": { "enabled": true },
+  "provenance": { "status": "verified", "notes": "brain/vehicles/vw-type1/models/beetle-1303-1980.md" }
+}

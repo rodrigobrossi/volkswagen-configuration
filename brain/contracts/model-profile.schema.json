@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "vehicle-profile/v1",
+  "title": "ModelProfile",
+  "description": "brain/contracts/model-profile.md — the essence of one 3D asset.",
+  "type": "object",
+  "required": ["schema", "id", "family", "label", "asset", "frame", "provenance"],
+  "additionalProperties": false,
+  "$defs": {
+    "fractionBox": {
+      "type": "object",
+      "required": ["xMin", "xMax", "yMin", "yMax", "zMin", "zMax"],
+      "properties": {
+        "xMin": { "type": "number" }, "xMax": { "type": "number" },
+        "yMin": { "type": "number" }, "yMax": { "type": "number" },
+        "zMin": { "type": "number" }, "zMax": { "type": "number" }
+      }
+    },
+    "articulation": {
+      "type": "object",
+      "required": ["axis", "openAngle", "pivotY", "pivotZ"],
+      "properties": {
+        "axis": { "enum": ["x", "y"] },
+        "openAngle": { "type": "number" },
+        "pivotY": { "enum": ["min", "max", "center"] },
+        "pivotZ": { "enum": ["min", "max"] },
+        "signs": { "type": "array", "items": { "type": "number" } }
+      }
+    },
+    "extract": {
+      "oneOf": [
+        { "type": "object", "required": ["kind", "match"], "properties": { "kind": { "const": "node" }, "match": { "type": "array", "items": { "type": "string" }, "minItems": 1 } } },
+        { "type": "object", "required": ["kind", "match"], "properties": { "kind": { "const": "node-split-x" }, "match": { "type": "string" } } },
+        {
+          "type": "object",
+          "required": ["kind", "source", "region"],
+          "properties": {
+            "kind": { "const": "region-clip" },
+            "source": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+            "region": { "$ref": "#/$defs/fractionBox" },
+            "mirrorX": { "type": "boolean" },
+            "trim": {
+              "type": "object",
+              "required": ["match", "region"],
+              "properties": {
+                "match": { "type": "array", "items": { "type": "string" } },
+                "region": { "$ref": "#/$defs/fractionBox" },
+                "excludeMaterials": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "properties": {
+    "schema": { "const": "vehicle-profile/v1" },
+    "id": { "type": "string" },
+    "family": { "type": "string" },
+    "label": { "type": "string" },
+    "asset": {
+      "type": "object",
+      "required": ["path", "credit"],
+      "properties": { "path": { "type": "string" }, "rootNode": { "type": "string" }, "credit": { "type": "string" } }
+    },
+    "frame": {
+      "type": "object",
+      "required": ["rotationY", "scale"],
+      "properties": { "rotationY": { "type": "number" }, "scale": { "type": "number", "exclusiveMinimum": 0 } }
+    },
+    "parts": { "type": "object", "properties": { "groupBy": { "enum": ["node", "material"] } } },
+    "paint": {
+      "type": "object",
+      "properties": { "materials": { "type": "array", "items": { "type": "string" } }, "recolorable": { "type": "boolean" } }
+    },
+    "openables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["group", "extract", "articulation"],
+        "properties": {
+          "group": { "enum": ["doors", "frontLid", "rearLid"] },
+          "extract": { "$ref": "#/$defs/extract" },
+          "articulation": { "$ref": "#/$defs/articulation" },
+          "companions": {
+            "type": "object",
+            "properties": {
+              "attachNearest": { "type": "array", "items": { "type": "string" } },
+              "splitByFootprint": { "type": "array", "items": { "type": "string" } }
+            }
+          },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "wheels": {
+      "type": "object",
+      "required": ["mounts"],
+      "properties": {
+        "mounts": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "object", "required": ["node"], "properties": { "node": { "type": "string" }, "splitX": { "type": "boolean" } } }
+        }
+      }
+    },
+    "interior": {
+      "type": "object",
+      "required": ["source"],
+      "properties": { "source": { "enum": ["own", "donor"] }, "donorScale": { "type": "number" }, "flipZ": { "type": "boolean" } }
+    },
+    "cabinFloor": {
+      "type": "object",
+      "required": ["y", "halfWidth", "zMin", "zMax"],
+      "properties": { "y": { "type": "number" }, "halfWidth": { "type": "number" }, "zMin": { "type": "number" }, "zMax": { "type": "number" } }
+    },
+    "engineBay": { "type": "object", "properties": { "hideNodes": { "type": "array", "items": { "type": "string" } } } },
+    "platform": { "type": "object", "required": ["enabled"], "properties": { "enabled": { "type": "boolean" } } },
+    "provenance": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": { "enum": ["draft", "verified"] },
+        "notes": { "type": "string" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  }
+}

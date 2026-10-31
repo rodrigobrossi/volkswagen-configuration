@@ -1,0 +1,11 @@
+{
+  "schema": "vehicle-profile/v1",
+  "id": "model-1948",
+  "family": "vw-type1",
+  "label": "VW Typ 11 (1948)",
+  "asset": { "path": "/models/fusca-1948.glb", "credit": "Peter Boehm — CC-BY-4.0" },
+  "frame": { "rotationY": 0, "scale": 5.62 },
+  "parts": { "groupBy": "material" },
+  "interior": { "source": "donor", "donorScale": 0.85 },
+  "provenance": { "status": "verified", "notes": "brain/vehicles/vw-type1/models/typ11-1948.md" }
+}

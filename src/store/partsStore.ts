@@ -1,14 +1,15 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { CarPart } from '../data/carParts'
+import type { Finish } from '../core/contracts/catalog'
+import type { CarPart } from '../core/parts/discovery'
 
 /**
- * Estado do editor de PEÇAS (separado do configStore de presets): overrides por peça
- * (mostrar/ocultar, cor, e — nas próximas etapas — transformação), calibração por modelo e peças
- * extras carregadas via GLTF. Persistido em localStorage (só os dados de edição; seleção e modo de
- * ajuste são efêmeros da UI). Chave de override = `${modelKey}:${partKey}`; calibração = `${modelKey}`.
+ * Estado do editor de PEÇAS (separado do configStore): overrides por peça (mostrar/ocultar, cor,
+ * transformação), calibração por modelo e peças extras carregadas via GLTF. Persistido em
+ * localStorage (só os dados de edição; seleção e modo de ajuste são efêmeros da UI).
+ * Chave de override = `${modelId}:${partKey}`; calibração = `${modelId}` — o modelId é o `id` do
+ * ModelProfile, estável por contrato (brain/contracts/model-profile.md).
  */
-export type Finish = 'gloss' | 'matte' | 'metallic' | 'patina'
 type Vec3 = [number, number, number]
 
 export interface PartOverride {
