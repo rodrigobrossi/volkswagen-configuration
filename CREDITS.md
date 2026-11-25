@@ -1,7 +1,7 @@
 # Credits
 
-3D models used in `public/models/` (via [.specs/3d-model.spec.md](.specs/3d-model.spec.md) —
-Real GLTF Models):
+3D models used in `public/models/` (bound by the profiles in `src/vehicles/*/models/`; per-model
+knowledge in [brain/vehicles/](brain/vehicles/)):
 
 ## fusca-1948.glb
 

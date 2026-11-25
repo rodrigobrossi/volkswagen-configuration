@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 
-// Matches WHEEL_RADIUS in FuscaModel.tsx / .specs/3d-model.spec.md (0.32m tire radius) — the
+// Matches WHEEL_RADIUS in FuscaModel.tsx / brain/specs/procedural-renderer.md (0.32m tire radius) — the
 // default real-world diameter real wheel models get scaled to when a caller doesn't pass its own
 // measured `diameter` (see RealVehicle.tsx, which measures each car's own baked wheels instead
 // of using this constant, so its replacement wheels match that specific model's proportions).

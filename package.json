@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "brain:check": "node tools/brain/check.mjs",
+    "brain:learn": "node tools/learning/learn.mjs",
+    "brain:ingest": "node tools/learning/ingest.mjs",
+    "brain:evaluate": "node tools/learning/evaluate.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",

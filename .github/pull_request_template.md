@@ -20,7 +20,9 @@
 - [ ] `npm run lint` passes
 - [ ] `npm run build` passes
 - [ ] Verified in the 3D viewer (`npm run dev`) — screenshot/clip below if visual
-- [ ] `docs/SDD.md` updated if the data model, architecture, or §6 gaps changed
+- [ ] Brain updated: spec/ADR for behaviour changes, model note for profile changes, `L-` note for surprises
+- [ ] `npm run brain:check` passes (0 errors)
+- [ ] Pipeline/render change: parity probe unchanged for untouched models (`brain/specs/rendering.md`)
 - [ ] For `release/*` / `hotfix/*`: `package.json` version bumped to match the tag
 
 ## Screenshots / notes

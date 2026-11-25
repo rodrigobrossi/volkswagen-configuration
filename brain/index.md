@@ -4,8 +4,8 @@ type: index
 title: Map of content
 status: active
 tags: [brain]
-links: [IDX-brain]
-updated: 2026-09-24
+links: [IDX-brain, IDX-specs, IDX-roadmap, IDX-learnings, IDX-decisions]
+updated: 2026-11-13
 ---
 
 # Map of content
@@ -40,5 +40,11 @@ extract ([node](algorithms/extract-node.md) · [split merged X](algorithms/split
 [Beetle 1968](vehicles/vw-type1/models/beetle-1968.md) · [1303 1980](vehicles/vw-type1/models/beetle-1303-1980.md) ·
 [Fusca 1973](vehicles/vw-type1/models/fusca-1973.md)
 
+**Specs (SDD)** — [index](specs/README.md): [governance](specs/governance.md) · [catalog](specs/catalog.md) ·
+[style presets](specs/style-presets.md) · [reference vehicle](specs/reference-vehicle.md) ·
+[config panel](specs/config-panel.md) · [parts editor](specs/parts-editor.md) ·
+[scene viewer](specs/scene-viewer.md) · [rendering](specs/rendering.md) ·
+[procedural renderer](specs/procedural-renderer.md)
+
 **Decisions** — [ADR index](decisions/README.md) · **Learnings** — [lesson index](learnings/README.md) ·
-**Specs** — [spec index](specs/README.md) · **Roadmap** — [open work](roadmap/README.md)
+**Roadmap** — [open work](roadmap/README.md) · **Templates** — [_templates/](_templates/)
