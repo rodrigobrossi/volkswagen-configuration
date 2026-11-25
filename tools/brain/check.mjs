@@ -129,7 +129,14 @@ for (const { file, at, fm, text } of parsed) {
 }
 
 // ── code cites only existing knowledge ─────────────────────────────────────────────────────────
-const codeFiles = [...walk(path.join(ROOT, 'src'), (p) => /\.(ts|tsx|json)$/.test(p)), ...walk(path.join(ROOT, 'tools'), (p) => p.endsWith('.mjs')), ...walk(path.join(ROOT, '.claude'), (p) => p.endsWith('.md'))]
+const codeFiles = [
+  ...walk(path.join(ROOT, 'src'), (p) => /\.(ts|tsx|json)$/.test(p)),
+  ...walk(path.join(ROOT, 'tools'), (p) => p.endsWith('.mjs')),
+  // Agent skills (Claude in .claude/, Codex mirror in .agents/) and the root agent context files.
+  ...walk(path.join(ROOT, '.claude'), (p) => p.endsWith('.md')),
+  ...walk(path.join(ROOT, '.agents'), (p) => p.endsWith('.md')),
+  ...['CLAUDE.md', 'AGENTS.md'].map((f) => path.join(ROOT, f)).filter((p) => fs.existsSync(p)),
+]
 for (const file of codeFiles) {
   for (const m of read(file).matchAll(/brain\/[\w./-]+?\.(md|json)/g)) {
     if (!fs.existsSync(path.join(ROOT, m[0]))) errors.push(`${rel(file)}: cites missing ${m[0]}`)

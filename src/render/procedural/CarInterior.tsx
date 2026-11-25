@@ -1,8 +1,7 @@
-// Interior: dashboard + steering wheel + two simplified seats. Extracted from FuscaModel so real
-// GLTF models lacking their own baked-in cabin (see hasInterior in carModels.ts) can reuse it.
+// Interior: dashboard + steering wheel + two simplified seats of the procedural renderer (real
+// models get a real cabin instead — own or donor, see brain/algorithms/donor-interior.md).
 //
-// The exterior body/shell in every context this mounts into is solid (procedural: overlapping
-// ellipsoids; real models: unsegmented single-shell meshes) — there's no actual cavity for this
+// The procedural body is solid overlapping ellipsoids — there's no actual cavity for this
 // geometry to sit in, so it would otherwise be fully buried regardless of glass/open doors.
 // `depthTest={false}` + a high `renderOrder` makes it render on top unconditionally — a
 // documented approximation ("always visible" instead of true occlusion), not an accident. See

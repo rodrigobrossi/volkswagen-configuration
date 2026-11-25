@@ -1,88 +1,36 @@
 ---
 name: add-catalog-option
-description: Add a new selectable option (wheel, interior, exterior color, steering wheel, engine, chassis year, or style preset) to the Fusca configurator's catalog in src/data/fusca.ts, keeping the data model spec and project memory in sync. Use when asked to add/create a new wheel style, interior, color, steering wheel, engine option, chassis year, or style preset for the Fusca configurator.
+description: Add a selectable option (wheel, interior, exterior color/paint, steering wheel, suspension, engine, chassis year/era) or a style preset to a vehicle family's catalog (src/vehicles/<family>/catalog.ts), following brain/specs/catalog.md. Use when asked to add/create a new wheel style, interior, color, steering wheel, engine, era or preset in the configurator.
 ---
 
-# Add Catalog Option
+# Add a catalog option
 
-Adds a new entry to one of the Fusca configurator's option catalogs in `src/data/fusca.ts`,
-following the conventions in [.specs/data-model.spec.md](../../../.specs/data-model.spec.md),
-and keeps specs + project memory in sync. This is the standard way to extend the
-configurator's options — prefer it over freestyle edits to `data/fusca.ts`.
+Catalog = data in `src/vehicles/<family>/catalog.ts` (Type 1: `src/vehicles/vw-type1/catalog.ts`).
+The panel and systems render it automatically by **role**. Rules:
+[brain/specs/catalog.md](../../../brain/specs/catalog.md) ·
+presets: [brain/specs/style-presets.md](../../../brain/specs/style-presets.md) ·
+owner's car: [brain/specs/reference-vehicle.md](../../../brain/specs/reference-vehicle.md).
 
 ## Steps
+1. **Find the group** in `optionGroups` (Type 1: `era`, `paint`, `wheels`, `suspension`, `steering`,
+   `interior`, `engine`) and its option array (`eras`, `paints`, `wheels`, …).
+2. **Add the entry** with the same fields as its neighbours:
+   - `id` kebab-case, unique, stable — never rename a shipped id;
+   - `label` PT for real Brazilian colours/trims, EN for generic mechanics;
+   - `note`: what it is + its real-world reference; photo-derived ⇒ say so.
+   - Role contracts: `paint` needs `hex` + `finish`; `wheels` needs `rimColor`, `rimStyle`, `tireProfile`.
+3. **New enum value?** (`finish`, `rimStyle`, `tireProfile`, `taillightShape`, `rimMaterial`) — add it to
+   the type, add its branch in the procedural renderer
+   ([brain/specs/procedural-renderer.md](../../../brain/specs/procedural-renderer.md)) and, for `finish`,
+   to `FINISH_PROPS` in `src/core/contracts/catalog.ts`. Never let it fall through to a default.
+4. **Preset?** `selections` must name a valid option for **every** group; optionally pin a model in
+   `modelRules.byPreset` (`family.ts`).
+5. **Era that should show a real model?** Map it in `modelRules.byOption.map`.
+6. **Gate:** `node_modules/.bin/tsc -b`, `npm run brain:check`; select the option in the browser on the
+   procedural renderer and on a real model (paint/wheels).
+7. **Brain:** if an invariant or enum changed, update `brain/specs/catalog.md` (values table) and
+   `brain/vehicles/<family>/catalog.md` in the same branch.
 
-1. **Read the spec first**: [.specs/data-model.spec.md](../../../.specs/data-model.spec.md) for
-   the type/invariants of the catalog you're adding to, and
-   [.specs/3d-model.spec.md](../../../.specs/3d-model.spec.md) if the new option touches
-   anything rendered in 3D (wheels, exterior colors, chassis-year taillight shape).
-
-2. **Identify the catalog and type** in `src/data/fusca.ts`:
-   - Wheel → `wheelOptions: WheelOption[]`
-   - Interior → `interiorOptions: InteriorOption[]`
-   - Exterior color → `exteriorColors: ExteriorColor[]`
-   - Steering wheel → `steeringWheelOptions: SteeringWheelOption[]`
-   - Engine → `engineOptions: EngineOption[]`
-   - Chassis year → `chassisYears: ChassisYear[]`
-   - Style preset → `stylePresets: StylePreset[]`
-
-3. **Add the entry**, following the existing entries' shape exactly (same fields, same style of
-   `id`/`label`/`note`). Rules from the data model spec:
-   - `id`: kebab-case, unique in its catalog, stable (don't reuse or rename existing ids).
-   - `label`: user-facing string, matching the language convention of neighboring entries.
-   - `note`: one sentence — what it is, and the real-world reference if there is one (e.g.
-     "matches `reference/fusca-photos`" — see
-     [.specs/reference-vehicle.spec.md](../../../.specs/reference-vehicle.spec.md) if the ask
-     references the owner's real car).
-   - For a **style preset**: every `config.*Id` must resolve to a real id in its catalog —
-     double check each one against the file, don't guess.
-
-4. **New enum value?** If the option introduces a new value of an existing enum-like field
-   (`finish`, `tireProfile`, `taillightShape`, `rimMaterial`, `material`), it needs a
-   corresponding render branch:
-   - `finish`/exterior color rendering → `FuscaModel.tsx` (material roughness/metalness/clearcoat mapping)
-   - `tireProfile` → `Wheel.tsx`
-   - `taillightShape` → `FuscaModel.tsx` taillight branch
-   - `rimMaterial` (steering wheel), interior `material` → currently data-only / spec-sheet
-     display, no 3D branch needed yet (see 3d-model.spec.md's "explicitly out of scope")
-   Add the type union value in the relevant `interface`/`type` in `data/fusca.ts` too.
-
-5. **Typecheck**: `npx tsc -b` from the project root. Fix any type errors before moving on.
-
-6. **Verify visually**: run the dev server (`npm run dev`) and select the new option (directly,
-   or via its preset) in the browser — confirm it renders as expected and doesn't crash other
-   selections.
-
-7. **Log it**: append a dated entry to
-   [.claude/memory/context.md](../../memory/context.md) (newest entries at the top) — one or two
-   sentences: what was added, to which catalog, and why (what the user asked for or what
-   reference it's based on). This is the project's running decision log — don't skip it, even
-   for a single-entry addition.
-
-8. **Update `.specs/` if needed**: if you added a new enum value or changed an invariant,
-   update the relevant spec file's table in the same change (data-model.spec.md at minimum).
-
-## Example
-
-Adding a new wheel style "Chrome Reverse":
-
-```ts
-// src/data/fusca.ts — wheelOptions array
-{
-  id: 'chrome-reverse',
-  label: 'Chrome Reverse',
-  rimColor: '#e0e0e0',
-  tireProfile: 'street',
-  note: 'Deep-dish reverse wheel popular in the lowered street scene.',
-},
-```
-
-No new enum value (`tireProfile: 'street'` already exists) → no `FuscaModel.tsx`/`Wheel.tsx`
-changes needed. Typecheck, verify in browser, then log to `context.md`:
-
-```markdown
-## 2026-07-20 — Added "Chrome Reverse" wheel option
-
-- User asked for a deep-dish reverse wheel style for the lowered street look. Added
-  `wheelOptions['chrome-reverse']` in data/fusca.ts. No new tireProfile — reuses 'street'.
-```
+## Owner rules (Type 1)
+"Rebaixado" is a suspension height, not a preset; "rat look" is the `patina` paint finish; the
+"mexicana 8 janelas" wheel is never removed.

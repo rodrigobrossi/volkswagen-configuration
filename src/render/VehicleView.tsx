@@ -1,15 +1,16 @@
 import { Suspense, type ComponentType } from 'react'
+import { getFamily } from '../core/registry'
 import { useFamily, useResolvedModel } from '../store/selectors'
+import { DEFAULT_FAMILY_ID } from '../vehicles'
 import { FuscaModel } from './procedural/FuscaModel'
 import { preloadFamily, RealVehicle } from './RealVehicle'
-import { vwType1 } from '../vehicles/vw-type1/family'
 
 /** Procedural renderers by id (VehicleFamily.proceduralRenderer) — used when no model resolves. */
 const PROCEDURAL: Record<string, ComponentType> = {
   'vw-type1-procedural': FuscaModel,
 }
 
-preloadFamily(vwType1)
+preloadFamily(getFamily(DEFAULT_FAMILY_ID))
 
 /**
  * The vehicle in the scene: the model the configuration resolves to (registry rules), rendered

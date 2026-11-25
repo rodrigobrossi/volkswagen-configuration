@@ -1,13 +1,14 @@
-# Project Memory / Context Registry
+# Project Memory / Context Registry — FROZEN ARCHIVE (2026-07)
 
-Running log of project context and decisions for the Fusca 3D Configurator, for any Claude
-Code session (or the `/add-catalog-option` skill) to read before making changes. Newest entries
-at the top. This is a project-committed file (not personal/cross-session memory) — it travels
-with the repo.
+**Do not add entries here.** Since the 2026-09 refactor the source of truth is the atomic brain:
+current state in `brain/specs/`, `brain/contracts/`, `brain/algorithms/`; the *why* in
+`brain/decisions/` (ADRs); gotchas in `brain/learnings/`; open work in `brain/roadmap/`. Start at
+`brain/README.md`.
 
-For the current architecture/data-model reference, see [docs/SDD.md](../../docs/SDD.md) and
-[.specs/](../../.specs/) — this file is the *history/rationale* log, not the current-state doc;
-update those when structure changes, and add an entry here for *why*.
+This file is kept as history of the July 2026 prototype. It mentions files that no longer exist
+(`src/data/fusca.ts`, `carModels.ts`, `RealCarModel.tsx`, `.specs/`, `docs/SDD.md`); the lessons that
+still apply were migrated to `brain/learnings/` (e.g. L-0001 name sanitization, L-0002 attach while
+parented, L-0009 fresh tab after hook changes).
 
 ---
 
